@@ -1,0 +1,21 @@
+# Dependency directories
+/frontend/node_modules/
+/backend/node_modules/
+
+# Expo specific files
+/frontend/.expo/
+/frontend/.expo-shared/
+
+# Environment variables (SECURITY - DO NOT COMMIT)
+.env
+/backend/.env
+/frontend/.env
+
+# Log files
+*.log
+
+# OS-specific files
+.DS_Store
+
+# IDE files
+.vscode/
