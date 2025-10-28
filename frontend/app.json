@@ -1,0 +1,29 @@
+{
+   "expo": {
+    "name": "Borrow & Swap",
+    "slug": "borrow-and-swap",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "ac.in.iitrpr.borrowandswap"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
