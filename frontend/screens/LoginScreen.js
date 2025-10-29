@@ -52,14 +52,14 @@ export default function LoginScreen({ navigation }) {
         });
 
         Alert.alert("Account Created", "Welcome to Borrow & Swap!");
-        setIsSignup(false); // 👈 Switch to login page
-        setEmail("");       // 👈 Clear email field
-        setPassword("");    // 👈 Clear password field
+        setIsSignup(false); 
+        setEmail("");       
+        setPassword("");    
       } else {
-        // Login flow
+        
         await signInWithEmailAndPassword(auth, email, password);
         Alert.alert("Login Successful", "Welcome back!");
-        navigation.replace("Home");
+        
       }
     } catch (error) {
       Alert.alert("Error", error.message);
