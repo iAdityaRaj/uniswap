@@ -79,11 +79,11 @@ export default function LoginScreen({ navigation }) {
       >
         <View style={styles.container}>
           <Text style={styles.title}>
-            {isSignup ? "Create Account" : "Login to Borrow & Swap"}
+            {isSignup ? "Create Account" : "Login to UniSwap"}
           </Text>
 
           <TextInput
-            placeholder="IIT Ropar Email"
+            placeholder="enter IIT Ropar Email"
             style={styles.input}
             autoCapitalize="none"
             keyboardType="email-address"
