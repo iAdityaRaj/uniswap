@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "uniswap-iitrpr"
-  }
+    "default": "uniswap-iitrpr",
+    "uniswap": "uniswap-iitrpr"
+  },
+  "targets": {},
+  "etags": {}
 }
