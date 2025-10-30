@@ -69,7 +69,9 @@ exports.addItem = functions.https.onRequest(async (req, res) => {
       description,
       imageUrl,
       available: available ?? true,
-      createdAt: FieldValue.serverTimestamp(), // ✅ fixed
+      createdAt: FieldValue.serverTimestamp(), 
+    
+
     };
 
     const docRef = await db.collection("items").add(newItem);
@@ -179,3 +181,155 @@ exports.deleteItem = functions.https.onRequest(async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+
+//user modules
+
+
+exports.onUserCreate = functions.auth.user().onCreate(async (user) => {
+  try {
+    const uid = user.uid;
+    const userRef = db.collection("users").doc(uid);
+
+    const userData = {
+      uid,
+      email: user.email || "",
+      displayName: user.displayName || "",
+      profilePhotoUrl: user.photoURL || "",
+      trustScore: 5,
+      listedItemsCount: 0,
+      borrowedItemsCount: 0,
+      joinedAt: FieldValue.serverTimestamp(),
+    };
+
+    await userRef.set(userData, { merge: true });
+    console.log(`✅ Firestore user document created for UID: ${uid}`);
+  } catch (err) {
+    console.error("❌ Error creating user document:", err);
+  }
+});
+
+
+// Get user by UID
+exports.getUserByUid = functions.https.onRequest(async (req, res) => {
+  try {
+    if (req.method !== "GET")
+      return res.status(405).json({ error: "Method not allowed" });
+
+    const uid = req.query.uid;
+    if (!uid) return res.status(400).json({ error: "UID is required" });
+
+    const doc = await db.collection("users").doc(uid).get();
+    if (!doc.exists) return res.status(404).json({ error: "User not found" });
+
+    return res.status(200).json({ id: doc.id, ...doc.data() });
+  } catch (err) {
+    console.error("Error getting user:", err);
+    return res.status(500).json({ error: err.message || "Internal server error" });
+  }
+});
+
+
+//  Update user profile (manually via API if needed)
+exports.updateUser = functions.https.onRequest(async (req, res) => {
+  try {
+    if (req.method !== "PATCH" && req.method !== "PUT") {
+      return res.status(405).json({ error: "Method not allowed" });
+    }
+
+    const { uid, displayName, profilePhotoUrl, bio } = req.body;
+
+    if (!uid) {
+      return res.status(400).json({ error: "UID is required" });
+    }
+
+    const userRef = db.collection("users").doc(uid);
+
+    const updates = {};
+    if (displayName) updates.displayName = displayName;
+    if (profilePhotoUrl) updates.profilePhotoUrl = profilePhotoUrl;
+    if (bio) updates.bio = bio;
+    updates.updatedAt = FieldValue.serverTimestamp();
+
+    await userRef.update(updates);
+
+    return res.status(200).json({ message: "User updated successfully" });
+  } catch (error) {
+    console.error("Error updating user:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+
+//  Get all items listed by a specific user
+
+
+exports.getUserItems = functions.https.onRequest(async (req, res) => {
+  try {
+    const uid = req.query.uid;
+    if (!uid) {
+      return res.status(400).json({ error: "User UID is required" });
+    }
+
+    console.log("🔍 Fetching all items to debug...");
+
+    const allItemsSnapshot = await db.collection("items").get();
+    allItemsSnapshot.forEach((doc) => {
+      console.log("Doc:", doc.id, doc.data());
+    });
+
+    console.log("Filtering by UID:", uid);
+
+    const snapshot = await db
+      .collection("items")
+      .where("ownerUid", "==", uid)
+      .orderBy("createdAt", "desc")
+      .get();
+
+    console.log("✅ Total items found:", snapshot.size);
+
+    const items = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    return res.status(200).json(items);
+  } catch (err) {
+    console.error("❌ Error fetching user items:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+
+//  Create or Update User Document
+exports.createOrUpdateUser = functions.https.onRequest(async (req, res) => {
+  try {
+    if (req.method !== "POST") {
+      return res.status(405).json({ error: "Method not allowed" });
+    }
+
+    const { uid, email, displayName, profilePhotoUrl, bio } = req.body;
+
+    if (!uid || !email) {
+      return res.status(400).json({ error: "UID and email are required" });
+    }
+
+    const userRef = db.collection("users").doc(uid);
+
+    const userData = {
+      uid,
+      email,
+      displayName: displayName || "",
+      profilePhotoUrl: profilePhotoUrl || "",
+      bio: bio || "",
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+
+    await userRef.set(userData, { merge: true });
+
+    return res.status(200).json({ message: "User created/updated", uid });
+  } catch (error) {
+    console.error("Error in createOrUpdateUser:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
