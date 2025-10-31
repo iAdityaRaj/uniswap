@@ -1,44 +1,42 @@
-import React, { useEffect, useState } from "react";
 import { NavigationContainer } from "@react-navigation/native";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "./firebaseConfig";
-import LoginScreen from "./screens/LoginScreen";
+import { createStackNavigator } from "@react-navigation/stack";
+import AddItemScreen from "./screens/AddItemScreen";
+import ChatListScreen from "./screens/ChatListScreen";
+import ChatScreen from "./screens/ChatScreen";
+import EditItemScreen from "./screens/EditItemScreen";
 import HomeScreen from "./screens/HomeScreen";
-import { View, ActivityIndicator } from "react-native";
+import ItemDetailsScreen from "./screens/ItemDetailsScreen";
+import LoginScreen from "./screens/LoginScreen";
+import ProfileScreen from "./screens/ProfileScreen";
 
-const Stack = createNativeStackNavigator();
+
+const Stack = createStackNavigator();
 
 export default function App() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Listen to login/logout changes
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      setLoading(false);
-    });
-    return unsubscribe;
-  }, []);
-
-  if (loading) {
-    // Simple loader while checking auth
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color="#10b981" />
-      </View>
-    );
-  }
-
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {user ? (
-          <Stack.Screen name="Home" component={HomeScreen} />
-        ) : (
-          <Stack.Screen name="Login" component={LoginScreen} />
-        )}
+      <Stack.Navigator initialRouteName="Login">
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="ItemDetails" component={ItemDetailsScreen} />
+        <Stack.Screen
+          name="EditItem"
+          component={EditItemScreen}
+          options={{ title: "Edit Item" }}
+        />
+        <Stack.Screen
+          name="AddItem"
+          component={AddItemScreen}
+          options={{ title: "Add New Item" }}
+        />
+        <Stack.Screen
+          name="Profile"
+          component={ProfileScreen}
+          options={{ title: "My Profile" }}
+        />
+        <Stack.Screen name="Chat" component={ChatScreen} options={{ title: "Chat" }} />
+        <Stack.Screen name="ChatList" component={ChatListScreen} />
+
       </Stack.Navigator>
     </NavigationContainer>
   );

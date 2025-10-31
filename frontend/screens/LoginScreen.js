@@ -52,14 +52,14 @@ export default function LoginScreen({ navigation }) {
         });
 
         Alert.alert("Account Created", "Welcome to Borrow & Swap!");
-        setIsSignup(false); 
-        setEmail("");       
-        setPassword("");    
+        setIsSignup(false); // 👈 Switch to login page
+        setEmail("");       // 👈 Clear email field
+        setPassword("");    // 👈 Clear password field
       } else {
-        
+        // Login flow
         await signInWithEmailAndPassword(auth, email, password);
         Alert.alert("Login Successful", "Welcome back!");
-        
+        navigation.replace("Home");
       }
     } catch (error) {
       Alert.alert("Error", error.message);
@@ -79,11 +79,11 @@ export default function LoginScreen({ navigation }) {
       >
         <View style={styles.container}>
           <Text style={styles.title}>
-            {isSignup ? "Create Account" : "Login to UniSwap"}
+            {isSignup ? "Create Account" : "Login to Borrow & Swap"}
           </Text>
 
           <TextInput
-            placeholder="enter IIT Ropar Email"
+            placeholder="IIT Ropar Email"
             style={styles.input}
             autoCapitalize="none"
             keyboardType="email-address"
