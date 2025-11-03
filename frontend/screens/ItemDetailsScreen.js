@@ -1,89 +1,199 @@
-import { useEffect, useState } from "react";
-import { ActivityIndicator, Button, Image, StyleSheet, Text, View } from "react-native";
+import React from "react";
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  Platform,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function ItemDetailsScreen({ route, navigation }) {
-  const { itemId } = route.params; // ✅ correct param
-  const [item, setItem] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { item } = route.params;
+  const insets = useSafeAreaInsets(); // 👈 handles bottom safe zone
 
-  useEffect(() => {
-    const fetchItem = async () => {
-      try {
-        const response = await fetch(
-          `https://us-central1-uniswap-iitrpr.cloudfunctions.net/getItemById?id=${itemId}`
-        );
-        const data = await response.json();
-        console.log("Item details response:", data);
-        setItem(data);
-      } catch (error) {
-        console.error("Error fetching item details:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchItem();
-  }, [itemId]);
-
-  const handleDelete = async () => {
-    try {
-      await fetch(
-        `https://us-central1-uniswap-iitrpr.cloudfunctions.net/deleteItem?id=${itemId}`,
-        { method: "DELETE" }
-      );
-      alert("Item deleted successfully!");
-      navigation.goBack();
-    } catch (error) {
-      console.error("Error deleting item:", error);
-      alert("Failed to delete item");
-    }
-  };
-
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#10b981" />
-      </View>
-    );
-  }
-
-  if (!item) {
-    return (
-      <View style={styles.center}>
-        <Text>Item not found.</Text>
-      </View>
-    );
-  }
+  const postedDate =
+    item.createdAt?.toDate?.()
+      ? item.createdAt.toDate().toDateString()
+      : "N/A";
 
   return (
-    <View style={styles.container}>
-      <Image source={{ uri: item.imageUrl }} style={styles.image} />
-      <Text style={styles.title}>{item.title}</Text>
-      <Text style={styles.price}>₹{item.price}</Text>
-      <Text style={styles.desc}>{item.description}</Text>
-      <Button title="Delete Item" color="#ef4444" onPress={handleDelete} />
-      <Button
-      title="Edit Item"
-      onPress={() => navigation.navigate("EditItem", { itemId })}
-      color="#10b981"
-/>
-      <Button
-  title="Contact Seller"
-  onPress={() =>
-    navigation.navigate("Chat", { sellerId: item.ownerUid, itemId: item.id })
-  }
-/>
+    <SafeAreaView style={styles.safe}>
+      <StatusBar backgroundColor="#fff" barStyle="dark-content" />
 
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        <Image
+          source={
+            item.imageUrl
+              ? { uri: item.imageUrl }
+              : require("../assets/category_images/others.png")
+          }
+          style={styles.image}
+        />
 
-    </View>
+        <View style={styles.detailsCard}>
+          <Text style={styles.title}>{item.title}</Text>
+          <Text style={styles.category}>{item.category}</Text>
+
+          <View style={styles.priceRow}>
+            {item.price && (
+              <Text style={styles.price}>₹{item.price}/day</Text>
+            )}
+            <View
+              style={[
+                styles.typeTag,
+                {
+                  backgroundColor:
+                    item.type === "share" ? "#2563EB" : "#16a34a",
+                },
+              ]}
+            >
+              <Text style={styles.typeText}>
+                {item.type
+                  ? item.type.charAt(0).toUpperCase() + item.type.slice(1)
+                  : "Rent"}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Description</Text>
+            <Text style={styles.description}>
+              {item.description || "No description provided."}
+            </Text>
+          </View>
+
+          <Text style={styles.postedOn}>Posted on {postedDate}</Text>
+        </View>
+      </ScrollView>
+
+      {/* ✅ Button now respects bottom inset properly */}
+      <View
+        style={[
+          styles.footerContainer,
+          { paddingBottom: insets.bottom > 0 ? insets.bottom : 20 },
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.chatButton}
+          onPress={() =>
+            navigation.navigate("ChatScreen", { ownerId: item.userId })
+          }
+        >
+          <Ionicons name="chatbubble-ellipses-outline" size={20} color="#fff" />
+          <Text style={styles.chatText}>Chat with Owner</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  image: { width: "100%", height: 250, borderRadius: 10, marginBottom: 20 },
-  title: { fontSize: 24, fontWeight: "bold", marginBottom: 10 },
-  price: { fontSize: 20, color: "green", marginBottom: 10 },
-  desc: { fontSize: 16, color: "#555", marginBottom: 20 },
+  safe: {
+    flex: 1,
+    backgroundColor: "#f8f9fb",
+  },
+  scrollContainer: {
+    paddingBottom: 130,
+    paddingHorizontal: 15,
+  },
+  image: {
+    width: "100%",
+    height: 280,
+    resizeMode: "cover",
+    borderRadius: 16,
+    marginTop: 10,
+  },
+  detailsCard: {
+    backgroundColor: "#fff",
+    marginTop: 20,
+    borderRadius: 16,
+    padding: 18,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#0A66C2",
+    marginBottom: 4,
+  },
+  category: {
+    fontSize: 15,
+    color: "#777",
+    marginBottom: 10,
+  },
+  priceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 15,
+    gap: 10,
+  },
+  price: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#16a34a",
+  },
+  typeTag: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+  },
+  typeText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+  section: {
+    marginBottom: 15,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: "bold",
+    color: "#111",
+    marginBottom: 6,
+  },
+  description: {
+    fontSize: 15,
+    color: "#444",
+    lineHeight: 22,
+  },
+  postedOn: {
+    color: "#888",
+    fontSize: 13,
+    marginTop: 8,
+  },
+  footerContainer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    backgroundColor: "transparent",
+  },
+  chatButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#0A66C2",
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    borderRadius: 12,
+    elevation: 5,
+  },
+  chatText: {
+    color: "#fff",
+    fontSize: 17,
+    fontWeight: "bold",
+    marginLeft: 8,
+  },
 });

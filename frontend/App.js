@@ -1,43 +1,48 @@
+import React, { useEffect, useState } from "react";
+import { View, ActivityIndicator } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
-import { createStackNavigator } from "@react-navigation/stack";
-import AddItemScreen from "./screens/AddItemScreen";
-import ChatListScreen from "./screens/ChatListScreen";
-import ChatScreen from "./screens/ChatScreen";
-import EditItemScreen from "./screens/EditItemScreen";
-import HomeScreen from "./screens/HomeScreen";
-import ItemDetailsScreen from "./screens/ItemDetailsScreen";
-import LoginScreen from "./screens/LoginScreen";
-import ProfileScreen from "./screens/ProfileScreen";
-
-
-const Stack = createStackNavigator();
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "./firebaseConfig";
+import AppNavigation from "./AppNavigation";
+import AuthStack from "./screens/AuthStack";
+import Toast from "react-native-toast-message";
+import { navigationRef } from "./navigationRef";
 
 export default function App() {
-  return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="Login">
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Home" component={HomeScreen} />
-        <Stack.Screen name="ItemDetails" component={ItemDetailsScreen} />
-        <Stack.Screen
-          name="EditItem"
-          component={EditItemScreen}
-          options={{ title: "Edit Item" }}
-        />
-        <Stack.Screen
-          name="AddItem"
-          component={AddItemScreen}
-          options={{ title: "Add New Item" }}
-        />
-        <Stack.Screen
-          name="Profile"
-          component={ProfileScreen}
-          options={{ title: "My Profile" }}
-        />
-        <Stack.Screen name="Chat" component={ChatScreen} options={{ title: "Chat" }} />
-        <Stack.Screen name="ChatList" component={ChatListScreen} />
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-      </Stack.Navigator>
-    </NavigationContainer>
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, []);
+
+  if (loading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#fff",
+        }}
+      >
+        <ActivityIndicator size="large" color="#0A66C2" />
+      </View>
+    );
+  }
+
+  return (
+    <>
+      <NavigationContainer ref={navigationRef}>
+        {user ? <AppNavigation /> : <AuthStack />}
+      </NavigationContainer>
+
+      {/* ✅ Toast v3 compatible + smooth animation */}
+      <Toast position="top" topOffset={50} visibilityTime={2500} />
+    </>
   );
 }
