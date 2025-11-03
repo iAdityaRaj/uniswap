@@ -11,22 +11,18 @@ import {
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import * as ImagePicker from "expo-image-picker";
-import { db, storage } from "../firebaseConfig";
-import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { db, storage, auth } from "../firebaseConfig";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import Toast from "react-native-toast-message";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { navigationRef } from "../navigationRef";
 
-export default function EditItemScreen() {
-  const route = useRoute();
-  const navigation = useNavigation();
-  const { item } = route.params;
-
-  const [title, setTitle] = useState(item.title);
-  const [description, setDescription] = useState(item.description);
-  const [price, setPrice] = useState(String(item.price));
-  const [category, setCategory] = useState(item.category);
-  const [image, setImage] = useState(item.imageUrl || null);
+export default function RentItemScreen() {
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [price, setPrice] = useState("");
+  const [category, setCategory] = useState("Books");
+  const [image, setImage] = useState(null);
   const [uploading, setUploading] = useState(false);
 
   const pickImage = async () => {
@@ -62,55 +58,21 @@ export default function EditItemScreen() {
 
   const removeImage = () => setImage(null);
 
-  // 🔹 Check if any field has actually changed
-  const hasChanges = () => {
-    return (
-      title !== item.title ||
-      description !== item.description ||
-      price !== String(item.price) ||
-      category !== item.category ||
-      image !== item.imageUrl
-    );
-  };
-
-  const handleUpdate = async () => {
+  const handleSubmit = async () => {
     if (!title.trim() || !description.trim() || !price.trim()) {
       Toast.show({
         type: "error",
         text1: "Missing Fields",
-        text2: "Please fill all fields before saving.",
-      });
-      return;
-    }
-
-    if (!hasChanges()) {
-      Toast.show({
-        type: "info",
-        text1: "No changes detected",
-        text2: "Update something before saving.",
+        text2: "Please fill all fields before submitting.",
       });
       return;
     }
 
     setUploading(true);
     try {
-      const itemRef = doc(db, "items", item.id);
-      let imageUrl = item.imageUrl || null;
+      let imageUrl = null;
 
-      // 🧩 CASE 1: User removed the image
-      if (!image && item.imageUrl) {
-        const oldRef = ref(storage, item.imageUrl);
-        await deleteObject(oldRef).catch(() => {});
-        imageUrl = null;
-      }
-
-      // 🧩 CASE 2: User selected a new image
-      else if (image && image !== item.imageUrl) {
-        if (item.imageUrl) {
-          const oldRef = ref(storage, item.imageUrl);
-          await deleteObject(oldRef).catch(() => {});
-        }
-
+      if (image) {
         const response = await fetch(image);
         const blob = await response.blob();
         const storageRef = ref(storage, `items/${Date.now()}_${title}.jpg`);
@@ -118,27 +80,33 @@ export default function EditItemScreen() {
         imageUrl = await getDownloadURL(storageRef);
       }
 
-      // 🧩 Update Firestore document
-      await updateDoc(itemRef, {
+      const user = auth.currentUser;
+      await addDoc(collection(db, "items"), {
         title: title.trim(),
         description: description.trim(),
         price: parseFloat(price),
         category,
         imageUrl,
-        updatedAt: serverTimestamp(),
+        userId: user.uid,
+        type: "rent", // ✅ added field
+        createdAt: serverTimestamp(),
       });
 
       Toast.show({
         type: "success",
-        text1: "Item updated successfully!",
+        text1: "Item added successfully!",
       });
 
-      navigation.navigate("Tabs", { screen: "MyAds" });
+      // ✅ Redirect directly to My Ads tab
+      navigationRef.reset({
+        index: 0,
+        routes: [{ name: "Tabs", state: { routes: [{ name: "MyAds" }] } }],
+      });
     } catch (error) {
-      console.error("Error updating item:", error);
+      console.error("Error adding item:", error);
       Toast.show({
         type: "error",
-        text1: "Update Failed",
+        text1: "Upload Failed",
         text2: error.message,
       });
     } finally {
@@ -148,7 +116,7 @@ export default function EditItemScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Edit Item</Text>
+      <Text style={styles.title}>Rent an Item</Text>
 
       <TextInput
         style={styles.input}
@@ -203,21 +171,18 @@ export default function EditItemScreen() {
           </>
         ) : (
           <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
-            <Text style={styles.uploadText}>Upload New Image</Text>
+            <Text style={styles.uploadText}>Upload Item Image</Text>
           </TouchableOpacity>
         )}
       </View>
 
       <TouchableOpacity
-        style={[
-          styles.submitButton,
-          (uploading || !hasChanges()) && { opacity: 0.7 },
-        ]}
-        onPress={handleUpdate}
-        disabled={uploading || !hasChanges()}
+        style={[styles.submitButton, uploading && { opacity: 0.7 }]}
+        onPress={handleSubmit}
+        disabled={uploading}
       >
         <Text style={styles.submitText}>
-          {uploading ? "Saving..." : "Save Changes"}
+          {uploading ? "Uploading..." : "Submit"}
         </Text>
       </TouchableOpacity>
     </ScrollView>
