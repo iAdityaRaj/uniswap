@@ -1,68 +1,87 @@
 import React, { useState } from "react";
 import {
-  View,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  Alert,
   KeyboardAvoidingView,
-  ScrollView,
   Platform,
+  ScrollView,
+  View,
 } from "react-native";
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-} from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "../firebaseConfig";
+import { doc, getDoc } from "firebase/firestore";
+import Toast from "react-native-toast-message";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [isSignup, setIsSignup] = useState(false);
+  const [emailValidated, setEmailValidated] = useState(false);
 
-  const handleAuth = async () => {
+  const validateEmailInstant = () => {
     if (!email.endsWith("@iitrpr.ac.in")) {
-      Alert.alert("Access Denied", "Please use your IIT Ropar email ID.");
+      Toast.show({
+        type: "error",
+        text1: "Invalid Email",
+        text2: "Please use your IIT Ropar email address.",
+      });
+      setEmailValidated(false);
+    } else {
+      setEmailValidated(true);
+    }
+  };
+
+  const handleLogin = async () => {
+    if (!emailValidated) {
+      Toast.show({
+        type: "error",
+        text1: "Login Failed",
+        text2: "Please use a valid IIT Ropar email address.",
+      });
       return;
     }
 
-    // ✅ Only check password strength during signup
-    if (isSignup && password.length < 6) {
-      Alert.alert("Weak Password", "Password must be at least 6 characters long.");
-      return;
-    }
-
-    setLoading(true);
     try {
-      if (isSignup) {
-        // Signup flow
-        const userCredential = await createUserWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
-        const user = userCredential.user;
+      setLoading(true);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-        await setDoc(doc(db, "users", user.uid), {
-          email: user.email,
-          joinedAt: new Date(),
-        });
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      const userName = userDoc.exists() ? userDoc.data().name : "User";
 
-        Alert.alert("Account Created", "Welcome to Borrow & Swap!");
-        setIsSignup(false); // 👈 Switch to login page
-        setEmail("");       // 👈 Clear email field
-        setPassword("");    // 👈 Clear password field
-      } else {
-        // Login flow
-        await signInWithEmailAndPassword(auth, email, password);
-        Alert.alert("Login Successful", "Welcome back!");
-        navigation.replace("Home");
-      }
+      Toast.show({
+        type: "success",
+        text1: `Welcome back, ${userName}! 👋`,
+      });
     } catch (error) {
-      Alert.alert("Error", error.message);
+      let message = "Login failed. Please try again.";
+
+      switch (error.code) {
+        case "auth/invalid-credential":
+        case "auth/invalid-email":
+          message = "Invalid email or password.";
+          break;
+        case "auth/user-not-found":
+          message = "No account found with this email.";
+          break;
+        case "auth/wrong-password":
+          message = "Incorrect password.";
+          break;
+        case "auth/network-request-failed":
+          message = "Network error. Check your connection.";
+          break;
+        default:
+          message = error.message;
+      }
+
+      Toast.show({
+        type: "error",
+        text1: "Login Failed",
+        text2: message,
+      });
     } finally {
       setLoading(false);
     }
@@ -71,103 +90,112 @@ export default function LoginScreen({ navigation }) {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1 }}
+      style={{ flex: 1, backgroundColor: "#fff" }}
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContainer}
+        contentContainerStyle={{
+          flexGrow: 1,
+          justifyContent: "center",
+          paddingHorizontal: 20,
+        }}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.container}>
-          <Text style={styles.title}>
-            {isSignup ? "Create Account" : "Login to Borrow & Swap"}
-          </Text>
+        <Text
+          style={{
+            fontSize: 24,
+            fontWeight: "bold",
+            marginBottom: 20,
+            textAlign: "center",
+            color: "#0A66C2",
+          }}
+        >
+          Login to UniSwap
+        </Text>
 
-          <TextInput
-            placeholder="IIT Ropar Email"
-            style={styles.input}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
-          />
+        {/* Email Input */}
+        <TextInput
+          placeholder="IIT Ropar Email"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          value={email}
+          onChangeText={setEmail}
+          onEndEditing={validateEmailInstant}
+          style={{
+            borderWidth: 1,
+            borderColor: "#ccc",
+            padding: 12,
+            borderRadius: 8,
+            marginBottom: 12,
+            fontSize: 16,
+          }}
+        />
+
+        {/* Password Input + Eye Toggle */}
+        <View style={{ position: "relative", marginBottom: 20 }}>
           <TextInput
             placeholder="Password"
-            secureTextEntry
-            style={styles.input}
+            secureTextEntry={!showPassword}
             value={password}
+            onFocus={validateEmailInstant}
             onChangeText={setPassword}
+            style={{
+              borderWidth: 1,
+              borderColor: "#ccc",
+              padding: 12,
+              borderRadius: 8,
+              fontSize: 16,
+              paddingRight: 45,
+            }}
           />
-
           <TouchableOpacity
-            style={styles.button}
-            onPress={handleAuth}
-            disabled={loading}
+            onPress={() => setShowPassword(!showPassword)}
+            style={{
+              position: "absolute",
+              right: 15,
+              top: 14,
+            }}
           >
-            <Text style={styles.buttonText}>
-              {loading
-                ? isSignup
-                  ? "Creating..."
-                  : "Logging in..."
-                : isSignup
-                ? "Sign Up"
-                : "Login"}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => setIsSignup(!isSignup)}>
-            <Text style={styles.toggleText}>
-              {isSignup
-                ? "Already have an account? Login"
-                : "Don't have an account? Sign Up"}
-            </Text>
+            <Ionicons
+              name={showPassword ? "eye-off" : "eye"}
+              size={22}
+              color="#555"
+            />
           </TouchableOpacity>
         </View>
+
+        {/* Login Button */}
+        <TouchableOpacity
+          onPress={handleLogin}
+          disabled={loading}
+          style={{
+            backgroundColor: "#0A66C2",
+            padding: 15,
+            borderRadius: 8,
+            alignItems: "center",
+            opacity: loading ? 0.7 : 1,
+          }}
+        >
+          <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>
+            {loading ? "Logging in..." : "Login"}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Signup Link */}
+        <TouchableOpacity
+          onPress={() => navigation.navigate("Signup")}
+          style={{ marginTop: 15 }}
+        >
+          <Text
+            style={{
+              textAlign: "center",
+              color: "#10b981",
+              fontSize: 15,
+            }}
+          >
+            Don’t have an account? Sign Up
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  scrollContainer: {
-    flexGrow: 1,
-    justifyContent: "center",
-  },
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    paddingHorizontal: 30,
-    backgroundColor: "#fff",
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: "bold",
-    color: "#0a3960",
-    marginBottom: 40,
-    textAlign: "center",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 20,
-    fontSize: 16,
-  },
-  button: {
-    backgroundColor: "#10b981",
-    paddingVertical: 14,
-    borderRadius: 8,
-    marginBottom: 10,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-    textAlign: "center",
-  },
-  toggleText: {
-    color: "#0a3960",
-    textAlign: "center",
-    marginTop: 15,
-  },
-});
