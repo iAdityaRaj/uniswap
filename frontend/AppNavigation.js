@@ -1,9 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, TouchableOpacity, StyleSheet, Modal, Pressable, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
+import { auth, db } from "./firebaseConfig";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
+
 import HomeScreen from "./screens/HomeScreen";
 import ChatsScreen from "./screens/ChatsScreen";
 import AddItemScreen from "./screens/AddItemScreen";
@@ -13,13 +16,34 @@ import RentItemScreen from "./screens/RentItemScreen";
 import ShareItemScreen from "./screens/ShareItemScreen";
 import EditItemScreen from "./screens/EditItemScreen";
 import ItemDetailsScreen from "./screens/ItemDetailsScreen";
-
+import ChatScreen from "./screens/ChatScreen";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
 function BottomTabs({ navigation }) {
   const [sheetVisible, setSheetVisible] = useState(false);
+  const [unreadChats, setUnreadChats] = useState(0); // ✅ badge state
+
+  // ✅ Live unread chat count
+  useEffect(() => {
+    const me = auth.currentUser;
+    if (!me) return;
+
+    const q = query(collection(db, "chats"), where("users", "array-contains", me.uid));
+    const unsub = onSnapshot(q, (snap) => {
+      let count = 0;
+      snap.docs.forEach((d) => {
+        const data = d.data();
+        if (data.unreadCount?.[me.uid] > 0) {
+          count += 1;
+        }
+      });
+      setUnreadChats(count);
+    });
+
+    return unsub;
+  }, []);
 
   const openSheet = () => setSheetVisible(true);
   const closeSheet = () => setSheetVisible(false);
@@ -33,6 +57,20 @@ function BottomTabs({ navigation }) {
     <TouchableOpacity style={styles.fab} onPress={openSheet} activeOpacity={0.9}>
       <Ionicons name="add" size={32} color="#fff" />
     </TouchableOpacity>
+  );
+
+  // ✅ Custom Chat icon with badge
+  const ChatTabIcon = ({ color, size }) => (
+    <View>
+      <Ionicons name="chatbubble-outline" color={color} size={size} />
+      {unreadChats > 0 && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>
+            {unreadChats > 9 ? "9+" : unreadChats}
+          </Text>
+        </View>
+      )}
+    </View>
   );
 
   return (
@@ -60,9 +98,7 @@ function BottomTabs({ navigation }) {
           name="Chats"
           component={ChatsScreen}
           options={{
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="chatbubble-outline" color={color} size={size} />
-            ),
+            tabBarIcon: ChatTabIcon,
           }}
         />
 
@@ -74,7 +110,6 @@ function BottomTabs({ navigation }) {
           }}
         />
 
-        {/* ✅ Fixed internal route name */}
         <Tab.Screen
           name="MyAds"
           component={MyAdsScreen}
@@ -134,6 +169,8 @@ export default function AppNavigation() {
       <Stack.Screen name="ShareItem" component={ShareItemScreen} />
       <Stack.Screen name="EditItem" component={EditItemScreen} />
       <Stack.Screen name="ItemDetails" component={ItemDetailsScreen} />
+      <Stack.Screen name="ChatsScreen" component={ChatsScreen} />
+      <Stack.Screen name="ChatScreen" component={ChatScreen} />
     </Stack.Navigator>
   );
 }
@@ -166,6 +203,23 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
+  },
+  badge: {
+    position: "absolute",
+    right: -8,
+    top: -4,
+    backgroundColor: "red",
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "700",
   },
   backdrop: {
     flex: 1,
