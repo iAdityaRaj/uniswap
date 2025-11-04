@@ -2,3 +2,4 @@
 node_modules
 .firebase
 firebase-debug.log
+backend/functions/.runtimeconfig.json
