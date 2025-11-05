@@ -3,6 +3,10 @@ import { View, ActivityIndicator, AppState } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "./firebaseConfig";
+import { View, ActivityIndicator } from "react-native";
+import { NavigationContainer } from "@react-navigation/native";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "./firebaseConfig";
 import AppNavigation from "./AppNavigation";
 import AuthStack from "./screens/AuthStack";
 import Toast from "react-native-toast-message";
@@ -15,6 +19,7 @@ export default function App() {
   const [appState, setAppState] = useState(AppState.currentState);
 
   // ✅ Handle auth state
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -95,6 +100,7 @@ export default function App() {
       </NavigationContainer>
 
       {/* ✅ Toast */}
+      {/* ✅ Toast v3 compatible + smooth animation */}
       <Toast position="top" topOffset={50} visibilityTime={2500} />
     </>
   );

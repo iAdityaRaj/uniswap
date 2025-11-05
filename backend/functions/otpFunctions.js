@@ -1,4 +1,5 @@
 
+require("dotenv").config();
 
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
@@ -13,6 +14,7 @@ const db = admin.firestore();
 
 /* -------------------- 🔐 SECURE CONFIG HANDLING -------------------- */
 // Prefer Firebase config → then environment variables
+console.log("🔍 Firebase Config Snapshot:", JSON.stringify(functions.config(), null, 2));
 const config = functions.config() || {};
 
 const SENDGRID_API_KEY =

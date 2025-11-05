@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -30,6 +31,14 @@ export default function ItemDetailsScreen({ route, navigation }) {
   const { item } = route.params;
   const insets = useSafeAreaInsets();
   const [ownerName, setOwnerName] = useState("Loading...");
+  Platform,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+export default function ItemDetailsScreen({ route, navigation }) {
+  const { item } = route.params;
+  const insets = useSafeAreaInsets(); // 👈 handles bottom safe zone
 
   const postedDate =
     item.createdAt?.toDate?.()
@@ -144,6 +153,10 @@ export default function ItemDetailsScreen({ route, navigation }) {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar backgroundColor="#fff" barStyle="dark-content" />
+  return (
+    <SafeAreaView style={styles.safe}>
+      <StatusBar backgroundColor="#fff" barStyle="dark-content" />
+
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
@@ -163,6 +176,15 @@ export default function ItemDetailsScreen({ route, navigation }) {
 
           <View style={styles.priceRow}>
             {item.price && <Text style={styles.price}>₹{item.price}/day</Text>}
+
+        <View style={styles.detailsCard}>
+          <Text style={styles.title}>{item.title}</Text>
+          <Text style={styles.category}>{item.category}</Text>
+
+          <View style={styles.priceRow}>
+            {item.price && (
+              <Text style={styles.price}>₹{item.price}/day</Text>
+            )}
             <View
               style={[
                 styles.typeTag,
@@ -191,6 +213,7 @@ export default function ItemDetailsScreen({ route, navigation }) {
         </View>
       </ScrollView>
 
+      {/* ✅ Button now respects bottom inset properly */}
       <View
         style={[
           styles.footerContainer,
@@ -198,6 +221,12 @@ export default function ItemDetailsScreen({ route, navigation }) {
         ]}
       >
         <TouchableOpacity style={styles.chatButton} onPress={handleChatWithOwner}>
+        <TouchableOpacity
+          style={styles.chatButton}
+          onPress={() =>
+            navigation.navigate("ChatScreen", { ownerId: item.userId })
+          }
+        >
           <Ionicons name="chatbubble-ellipses-outline" size={20} color="#fff" />
           <Text style={styles.chatText}>Chat with Owner</Text>
         </TouchableOpacity>
@@ -209,6 +238,14 @@ export default function ItemDetailsScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#f8f9fb" },
   scrollContainer: { paddingBottom: 130, paddingHorizontal: 15 },
+  safe: {
+    flex: 1,
+    backgroundColor: "#f8f9fb",
+  },
+  scrollContainer: {
+    paddingBottom: 130,
+    paddingHorizontal: 15,
+  },
   image: {
     width: "100%",
     height: 280,
@@ -237,6 +274,56 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 17, fontWeight: "bold", color: "#111", marginBottom: 6 },
   description: { fontSize: 15, color: "#444", lineHeight: 22 },
   postedOn: { color: "#888", fontSize: 13, marginTop: 8 },
+  title: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#0A66C2",
+    marginBottom: 4,
+  },
+  category: {
+    fontSize: 15,
+    color: "#777",
+    marginBottom: 10,
+  },
+  priceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 15,
+    gap: 10,
+  },
+  price: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#16a34a",
+  },
+  typeTag: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+  },
+  typeText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+  section: {
+    marginBottom: 15,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: "bold",
+    color: "#111",
+    marginBottom: 6,
+  },
+  description: {
+    fontSize: 15,
+    color: "#444",
+    lineHeight: 22,
+  },
+  postedOn: {
+    color: "#888",
+    fontSize: 13,
+    marginTop: 8,
+  },
   footerContainer: {
     position: "absolute",
     bottom: 0,
@@ -256,4 +343,11 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   chatText: { color: "#fff", fontSize: 17, fontWeight: "bold", marginLeft: 8 },
+});
+  chatText: {
+    color: "#fff",
+    fontSize: 17,
+    fontWeight: "bold",
+    marginLeft: 8,
+  },
 });

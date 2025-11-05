@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { View, TouchableOpacity, StyleSheet, Modal, Pressable, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -17,6 +18,7 @@ import ShareItemScreen from "./screens/ShareItemScreen";
 import EditItemScreen from "./screens/EditItemScreen";
 import ItemDetailsScreen from "./screens/ItemDetailsScreen";
 import ChatScreen from "./screens/ChatScreen";
+
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -99,6 +101,9 @@ function BottomTabs({ navigation }) {
           component={ChatsScreen}
           options={{
             tabBarIcon: ChatTabIcon,
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="chatbubble-outline" color={color} size={size} />
+            ),
           }}
         />
 
@@ -110,6 +115,7 @@ function BottomTabs({ navigation }) {
           }}
         />
 
+        {/* ✅ Fixed internal route name */}
         <Tab.Screen
           name="MyAds"
           component={MyAdsScreen}
@@ -265,4 +271,5 @@ const styles = StyleSheet.create({
   sheetBtnText: { fontSize: 16, color: "#0A66C2", fontWeight: "600" },
   sheetCancel: { paddingVertical: 14, alignItems: "center", marginTop: 6 },
   sheetCancelText: { color: "#888", fontSize: 15, fontWeight: "500" },
+});
 });
