@@ -31,7 +31,7 @@ exports.confirmReturn = rentalFunctions.confirmReturn;
 
 exports.checkRentalReminders = rentalFunctions.checkRentalReminders;
 
-const db = admin.firestore();
+
 
 // exports.restrictSignupDomain = onRequest((req, res) => {
 //   const { email } = req.body;

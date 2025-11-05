@@ -201,13 +201,6 @@ export default function ChatsScreen({ navigation }) {
         contentContainerStyle={styles.listPad}
         showsVerticalScrollIndicator={false}
       />
-import React from "react";
-import { View, Text, StyleSheet } from "react-native";
-
-export default function ChatsScreen() {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.text}>Chats Screen</Text>
     </View>
   );
 }
@@ -249,7 +242,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   badgeTxt: { color: "#fff", fontSize: 12, fontWeight: "700" },
-});
-  container: { flex: 1, alignItems: "center", justifyContent: "center" },
-  text: { fontSize: 20, color: "#0A66C2", fontWeight: "bold" },
 });
