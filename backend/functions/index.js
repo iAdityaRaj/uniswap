@@ -2,6 +2,8 @@ const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 admin.initializeApp();
 
+require("dotenv").config();
+
 const { FieldValue } = require("firebase-admin/firestore");
 const { onRequest } = require("firebase-functions/v2/https");
 const logger = require("firebase-functions/logger");
@@ -10,42 +12,50 @@ const otpFunctions = require("./otpFunctions");
 exports.sendOtpEmail = otpFunctions.sendOtpEmail;
 exports.verifyOtp = otpFunctions.verifyOtp;
 
+const rental = require("./rentalFunctions"); 
+const rentalFunctions = require("./rentalFunctions");
+exports.createRental = rentalFunctions.createRental;
+
+exports.markReturned = rentalFunctions.markReturned;
+exports.confirmReturn = rentalFunctions.confirmReturn;
+
+exports.checkRentalReminders = rentalFunctions.checkRentalReminders;
 
 const db = admin.firestore();
 
-exports.restrictSignupDomain = onRequest((req, res) => {
-  const { email } = req.body;
+// exports.restrictSignupDomain = onRequest((req, res) => {
+//   const { email } = req.body;
 
-  if (!email || typeof email !== "string") {
-    return res.status(400).json({ error: "Valid email is required" });
-  }
+//   if (!email || typeof email !== "string") {
+//     return res.status(400).json({ error: "Valid email is required" });
+//   }
 
-  const allowedDomain = "iitrpr.ac.in";
-  const emailParts = email.trim().toLowerCase().split("@");
+//   const allowedDomain = "iitrpr.ac.in";
+//   const emailParts = email.trim().toLowerCase().split("@");
 
-  if (emailParts.length !== 2) {
-    return res.status(400).json({ error: "Invalid email format" });
-  }
+//   if (emailParts.length !== 2) {
+//     return res.status(400).json({ error: "Invalid email format" });
+//   }
 
-  const domain = emailParts[1];
+//   const domain = emailParts[1];
 
-  if (domain !== allowedDomain) {
-    logger.info(`Signup rejected for domain: ${domain}`);
-    return res.status(403).json({ message: "Access denied. Invalid domain." });
-  }
+//   if (domain !== allowedDomain) {
+//     logger.info(`Signup rejected for domain: ${domain}`);
+//     return res.status(403).json({ message: "Access denied. Invalid domain." });
+//   }
 
-  const username = emailParts[0];
-  const startsWithNumber = /^\d/.test(username);
+//   const username = emailParts[0];
+//   const startsWithNumber = /^\d/.test(username);
 
-  if (!startsWithNumber) {
-    return res
-      .status(403)
-      .json({ message: "Access denied. Only student email format allowed." });
-  }
+//   if (!startsWithNumber) {
+//     return res
+//       .status(403)
+//       .json({ message: "Access denied. Only student email format allowed." });
+//   }
 
-  logger.info(`Signup allowed for student: ${email}`);
-  return res.json({ message: "Signup allowed", email });
-});
+//   logger.info(`Signup allowed for student: ${email}`);
+//   return res.json({ message: "Signup allowed", email });
+// });
 
 
 // CRUD 
@@ -265,7 +275,7 @@ exports.updateUser = functions.https.onRequest(async (req, res) => {
 });
 
 
-//  Get all items listed by a specific user
+//Get all items listed by a specific user
 
 
 exports.getUserItems = functions.https.onRequest(async (req, res) => {
@@ -338,3 +348,13 @@ exports.createOrUpdateUser = functions.https.onRequest(async (req, res) => {
   }
 });
 
+
+exports.triggerRentalReminders = functions.https.onRequest(async (req, res) => {
+  try {
+    await rental.processRentalReminders();
+    res.status(200).json({ message: "Manual rental reminder check complete" });
+  } catch (err) {
+    console.error("Error running manual check:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
