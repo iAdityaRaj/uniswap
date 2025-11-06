@@ -146,6 +146,14 @@ export default function ProfileScreen({ navigation }) {
         <Text style={styles.value}>No user data available</Text>
       )}
 
+      <TouchableOpacity
+        style={styles.wishlistButton}
+        onPress={() => navigation.navigate("Wishlist")}
+      >
+        <Text style={{ fontSize: 18, color: "#ffffffff", fontWeight: "bold" }}>
+          My Wishlist ❤️
+        </Text>
+      </TouchableOpacity>
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
@@ -234,6 +242,13 @@ const styles = StyleSheet.create({
   logoutButton: {
     marginTop: 30,
     backgroundColor: "#EF4444",
+    paddingVertical: 15,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  wishlistButton: {
+    marginTop: 30,
+    backgroundColor: "#000000ff",
     paddingVertical: 15,
     borderRadius: 10,
     alignItems: "center",
