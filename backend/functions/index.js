@@ -15,6 +15,11 @@ const db = admin.firestore();
 require("dotenv").config();
 
 
+const wishlistFunctions = require("./wishlistFunctions");
+exports.addToWishlist = wishlistFunctions.addToWishlist;
+exports.removeFromWishlist = wishlistFunctions.removeFromWishlist;
+exports.getWishlist = wishlistFunctions.getWishlist;
+
 
 const rental = require("./rentalFunctions"); 
 const rentalFunctions = require("./rentalFunctions");
