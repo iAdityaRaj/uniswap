@@ -6,11 +6,16 @@ import {
   StyleSheet,
   ActivityIndicator,
   TextInput,
+  FlatList,
+  Image,
 } from "react-native";
 import { auth, db } from "../firebaseConfig";
 import { signOut } from "firebase/auth";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import Toast from "react-native-toast-message";
+import { Ionicons } from "@expo/vector-icons";
+
+const BASE_URL = "https://us-central1-uniswap-iitrpr.cloudfunctions.net";
 
 export default function ProfileScreen({ navigation, route }) {
   const [userData, setUserData] = useState(null);
@@ -18,6 +23,8 @@ export default function ProfileScreen({ navigation, route }) {
   const [editing, setEditing] = useState(false);
   const [newName, setNewName] = useState("");
   const [trustScore, setTrustScore] = useState(null);
+  const [wishlist, setWishlist] = useState([]);
+  const [loadingWishlist, setLoadingWishlist] = useState(false);
 
   // 🟢 detect if viewing self or another user
   const viewingUid = route?.params?.uid || auth.currentUser?.uid;
@@ -34,9 +41,7 @@ export default function ProfileScreen({ navigation, route }) {
         }
 
         // Fetch trust score from backend
-        const res = await fetch(
-          `https://us-central1-uniswap-iitrpr.cloudfunctions.net/getUserByUid?uid=${viewingUid}`
-        );
+        const res = await fetch(`${BASE_URL}/getUserByUid?uid=${viewingUid}`);
         const data = await res.json();
         if (res.ok && data.trustScore !== undefined) {
           setTrustScore(data.trustScore);
@@ -50,6 +55,27 @@ export default function ProfileScreen({ navigation, route }) {
 
     fetchUserData();
   }, [viewingUid]);
+
+  // 🧠 Fetch Wishlist if own profile
+  useEffect(() => {
+    const fetchWishlist = async () => {
+      if (!isOwnProfile) return;
+      setLoadingWishlist(true);
+      try {
+        const res = await fetch(`${BASE_URL}/getWishlist?uid=${viewingUid}`);
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setWishlist(data);
+        }
+      } catch (error) {
+        console.error("Error fetching wishlist:", error);
+      } finally {
+        setLoadingWishlist(false);
+      }
+    };
+
+    fetchWishlist();
+  }, [isOwnProfile]);
 
   const handleLogout = async () => {
     try {
@@ -187,6 +213,52 @@ export default function ProfileScreen({ navigation, route }) {
               {trustScore !== null ? trustScore : "Loading..."}
             </Text>
           </View>
+
+          {/* ❤️ Wishlist Section */}
+          {isOwnProfile && (
+            <>
+              <Text style={styles.sectionTitle}>My Wishlist ❤️</Text>
+
+              {loadingWishlist ? (
+                <ActivityIndicator color="#0A66C2" />
+              ) : wishlist.length === 0 ? (
+                <Text style={styles.emptyText}>
+                  You haven’t added anything yet.
+                </Text>
+              ) : (
+                <FlatList
+                  data={wishlist}
+                  keyExtractor={(item) => item.id}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={styles.wishlistCard}
+                      onPress={() =>
+                        navigation.navigate("ItemDetailsScreen", { item })
+                      }
+                    >
+                      <Image
+                        source={
+                          item.imageUrl
+                            ? { uri: item.imageUrl }
+                            : require("../assets/category_images/others.png")
+                        }
+                        style={styles.itemImage}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.itemTitle}>{item.title}</Text>
+                        <Text style={styles.itemPrice}>₹{item.price}/day</Text>
+                      </View>
+                      <Ionicons
+                        name="chevron-forward"
+                        size={20}
+                        color="#888"
+                      />
+                    </TouchableOpacity>
+                  )}
+                />
+              )}
+            </>
+          )}
         </>
       ) : (
         <Text style={styles.value}>No user data available</Text>
@@ -202,17 +274,8 @@ export default function ProfileScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    justifyContent: "center",
-    backgroundColor: "#fff",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
+  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {
     fontSize: 26,
     fontWeight: "bold",
@@ -220,11 +283,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     textAlign: "center",
   },
-  label: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 4,
-  },
+  label: { fontSize: 16, color: "#666", marginBottom: 4 },
   value: {
     fontSize: 18,
     fontWeight: "bold",
@@ -243,14 +302,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 8,
   },
-  editText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  editContainer: {
-    marginBottom: 20,
-  },
+  editText: { color: "#fff", fontSize: 14, fontWeight: "600" },
+  editContainer: { marginBottom: 20 },
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
@@ -266,19 +319,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 6,
   },
-  saveText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  cancelBtn: {
-    alignItems: "center",
-    paddingVertical: 8,
-  },
-  cancelText: {
-    color: "#666",
-    fontSize: 14,
-  },
+  saveText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+  cancelBtn: { alignItems: "center", paddingVertical: 8 },
+  cancelText: { color: "#666", fontSize: 14 },
   logoutButton: {
     marginTop: 30,
     backgroundColor: "#EF4444",
@@ -286,11 +329,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
   },
-  logoutText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
+  logoutText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+
   trustContainer: {
     backgroundColor: "#E8F4FF",
     padding: 15,
@@ -299,14 +339,31 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 30,
   },
-  trustLabel: {
-    fontSize: 16,
-    color: "#555",
-    fontWeight: "600",
-  },
-  trustValue: {
-    fontSize: 36,
+  trustLabel: { fontSize: 16, color: "#555", fontWeight: "600" },
+  trustValue: { fontSize: 36, fontWeight: "bold", marginTop: 6 },
+
+  sectionTitle: {
+    fontSize: 18,
     fontWeight: "bold",
-    marginTop: 6,
+    color: "#0A66C2",
+    marginBottom: 10,
   },
+  wishlistCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 10,
+    elevation: 1,
+  },
+  itemImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 10,
+    marginRight: 12,
+  },
+  itemTitle: { fontSize: 16, fontWeight: "600", color: "#111" },
+  itemPrice: { fontSize: 14, color: "#16A34A" },
+  emptyText: { color: "#888", textAlign: "center", marginTop: 10 },
 });
