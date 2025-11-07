@@ -34,81 +34,67 @@ export default function SignupScreen({ navigation }) {
     }
   }, [email]);
 
-  const handleSignup = async () => {
-    if (emailError) {
-      Toast.show({
-        type: "error",
-        text1: "Invalid Email",
-        text2: String(emailError || ""), // ✅ Safe string conversion
-      });
-      return;
-    }
+const handleSignup = async () => {
+  if (emailError) {
+    Toast.show({
+      type: "error",
+      text1: "Invalid Email",
+      text2: String(emailError || ""),
+    });
+    return;
+  }
 
-    if (!name.trim()) {
-      Toast.show({
-        type: "error",
-        text1: "Missing Name",
-        text2: "Please enter your full name.",
-      });
-      return;
-    }
+  if (!name.trim()) {
+    Toast.show({
+      type: "error",
+      text1: "Missing Name",
+      text2: "Please enter your full name.",
+    });
+    return;
+  }
 
-    if (password.length < 6) {
-      Toast.show({
-        type: "error",
-        text1: "Weak Password",
-        text2: "Password must be at least 6 characters long.",
-      });
-      return;
-    }
+  if (password.length < 6) {
+    Toast.show({
+      type: "error",
+      text1: "Weak Password",
+      text2: "Password must be at least 6 characters long.",
+    });
+    return;
+  }
 
-    try {
-      setLoading(true);
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+  try {
+    setLoading(true);
+    const response = await fetch("https://us-central1-uniswap-iitrpr.cloudfunctions.net/sendOtpEmail", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
 
-      await setDoc(doc(db, "users", user.uid), {
-        name: name.trim(),
-        email: user.email,
-        joinedAt: new Date(),
-      });
+    const data = await response.json();
 
+    if (response.ok) {
       Toast.show({
         type: "success",
-        text1: "Account created successfully!",
-        text2: `Welcome, ${String(name || "User")}! 👋`, // ✅ Always safe string
+        text1: "OTP Sent!",
+        text2: "Please check your IIT Ropar email.",
       });
 
-      // navigation.replace("Home");
-    } catch (error) {
-      let message = "Signup failed. Please try again.";
-
-      switch (error.code) {
-        case "auth/email-already-in-use":
-          message = "Email already in use. Try logging in instead.";
-          break;
-        case "auth/invalid-email":
-          message = "Invalid email format.";
-          break;
-        case "auth/weak-password":
-          message = "Password must be at least 6 characters.";
-          break;
-        case "auth/network-request-failed":
-          message = "Network error. Check your connection.";
-          break;
-        default:
-          message = error.message;
-      }
-
-      Toast.show({
-        type: "error",
-        text1: "Signup Failed",
-        text2: String(message || ""), // ✅ Safe string conversion
-      });
-    } finally {
-      setLoading(false);
+      // ✅ Navigate to OTP screen and pass info
+      navigation.navigate("OTPScreen", { name, email, password });
+    } else {
+      throw new Error(data.error || "Failed to send OTP.");
     }
-  };
+  } catch (error) {
+    Toast.show({
+      type: "error",
+      text1: "Signup Failed",
+      text2: String(error.message || "Please try again."),
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <KeyboardAvoidingView

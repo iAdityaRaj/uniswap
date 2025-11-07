@@ -16,7 +16,6 @@ import RentItemScreen from "./screens/RentItemScreen";
 import ShareItemScreen from "./screens/ShareItemScreen";
 import EditItemScreen from "./screens/EditItemScreen";
 import ItemDetailsScreen from "./screens/ItemDetailsScreen";
-import WishlistScreen from "./screens/WishlistScreen";
 import ChatScreen from "./screens/ChatScreen";
 
 const Tab = createBottomTabNavigator();
@@ -121,7 +120,6 @@ function BottomTabs({ navigation }) {
             ),
           }}
         />
-        
 
         <Tab.Screen
           name="Profile"
@@ -132,9 +130,6 @@ function BottomTabs({ navigation }) {
             ),
           }}
         />
-        
-
-        
       </Tab.Navigator>
 
       {/* ✅ Bottom Sheet */}
@@ -176,7 +171,7 @@ export default function AppNavigation() {
       <Stack.Screen name="ItemDetails" component={ItemDetailsScreen} />
       <Stack.Screen name="ChatsScreen" component={ChatsScreen} />
       <Stack.Screen name="ChatScreen" component={ChatScreen} />
-      <Stack.Screen name="Wishlist" component={WishlistScreen} />
+       <Stack.Screen name="Profile" component={ProfileScreen} />
     </Stack.Navigator>
   );
 }
