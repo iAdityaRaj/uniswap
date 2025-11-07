@@ -30,20 +30,23 @@ export default function ItemDetailsScreen({ route, navigation }) {
   const { item } = route.params;
   const insets = useSafeAreaInsets();
   const [ownerName, setOwnerName] = useState("Loading...");
+  const [trustScore, setTrustScore] = useState(null);
+  const [loadingTrust, setLoadingTrust] = useState(true);
 
   const postedDate =
     item.createdAt?.toDate?.()
       ? item.createdAt.toDate().toDateString()
       : "N/A";
 
-  // ✅ Fetch owner name
+  // ✅ Fetch owner name and trust score
   useEffect(() => {
-    const fetchOwnerName = async () => {
+    const fetchOwnerData = async () => {
       try {
         if (!item.userId) {
           setOwnerName("Unknown Owner");
           return;
         }
+
         const userDoc = await getDoc(doc(db, "users", item.userId));
         if (userDoc.exists()) {
           const data = userDoc.data();
@@ -51,12 +54,26 @@ export default function ItemDetailsScreen({ route, navigation }) {
         } else {
           setOwnerName("Unknown Owner");
         }
+
+        // 🧠 Fetch trust score from backend
+        const res = await fetch(
+          `https://us-central1-uniswap-iitrpr.cloudfunctions.net/getUserByUid?uid=${item.userId}`
+        );
+        const data = await res.json();
+        if (res.ok && data.trustScore !== undefined) {
+          setTrustScore(data.trustScore);
+        } else {
+          setTrustScore("N/A");
+        }
       } catch (error) {
-        console.error("Error fetching owner name:", error);
+        console.error("Error fetching owner data:", error);
         setOwnerName("Unknown Owner");
+        setTrustScore("N/A");
+      } finally {
+        setLoadingTrust(false);
       }
     };
-    fetchOwnerName();
+    fetchOwnerData();
   }, [item.userId]);
 
   // ✅ Handle starting or reusing a chat
@@ -80,7 +97,6 @@ export default function ItemDetailsScreen({ route, navigation }) {
 
       const introText = `Hi! I'm interested in: ${item.title}`;
 
-      // ✅ If chat doesn't exist → create one and send intro message
       if (!chatSnap.exists()) {
         await setDoc(chatRef, {
           users: [user.uid, otherId],
@@ -100,7 +116,6 @@ export default function ItemDetailsScreen({ route, navigation }) {
           createdAt: serverTimestamp(),
         });
       } else {
-        // ✅ Chat exists: only send the intro message if not already sent for this item
         const msgsRef = collection(db, "chats", chatId, "messages");
         const q = query(msgsRef, where("text", "==", introText));
         const existingIntro = await getDocs(q);
@@ -122,7 +137,6 @@ export default function ItemDetailsScreen({ route, navigation }) {
             [`unreadCount.${otherId}`]: increment(1),
           });
         } else {
-          // ✅ Item already mentioned — just open chat
           await updateDoc(chatRef, {
             updatedAt: serverTimestamp(),
             [`readBy.${user.uid}`]: true,
@@ -130,7 +144,6 @@ export default function ItemDetailsScreen({ route, navigation }) {
         }
       }
 
-      // ✅ Open existing chat
       navigation.navigate("ChatScreen", {
         otherUserId: otherId,
         itemTitle: item.title,
@@ -159,7 +172,48 @@ export default function ItemDetailsScreen({ route, navigation }) {
         <View style={styles.detailsCard}>
           <Text style={styles.title}>{item.title}</Text>
           <Text style={styles.category}>{item.category}</Text>
-          <Text style={styles.ownerText}>Posted by: {ownerName}</Text>
+
+          {/* 🧍 Owner + Trust Score */}
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate("Profile", { uid: item.userId })
+            }
+          >
+            <Text style={styles.ownerText}>
+              Posted by:{" "}
+              <Text style={styles.ownerNameClickable}>{ownerName}</Text>
+            </Text>
+          </TouchableOpacity>
+
+          {/* ⭐ Trust Score */}
+          <View style={styles.trustRow}>
+            <Ionicons
+              name="shield-checkmark-outline"
+              size={16}
+              color="#0A66C2"
+            />
+            <Text style={styles.trustText}>
+              Trust Score:{" "}
+              {loadingTrust
+                ? "Loading..."
+                : trustScore !== null
+                ? trustScore
+                : "N/A"}
+            </Text>
+          </View>
+
+          {/* 👤 View Profile button */}
+          <TouchableOpacity
+            style={styles.viewProfileBtn}
+            onPress={() => navigation.navigate("Profile", { uid: item.userId })}
+          >
+            <Ionicons
+              name="person-circle-outline"
+              size={18}
+              color="#0A66C2"
+            />
+            <Text style={styles.viewProfileText}>View Owner Profile</Text>
+          </TouchableOpacity>
 
           <View style={styles.priceRow}>
             {item.price && <Text style={styles.price}>₹{item.price}/day</Text>}
@@ -198,7 +252,11 @@ export default function ItemDetailsScreen({ route, navigation }) {
         ]}
       >
         <TouchableOpacity style={styles.chatButton} onPress={handleChatWithOwner}>
-          <Ionicons name="chatbubble-ellipses-outline" size={20} color="#fff" />
+          <Ionicons
+            name="chatbubble-ellipses-outline"
+            size={20}
+            color="#fff"
+          />
           <Text style={styles.chatText}>Chat with Owner</Text>
         </TouchableOpacity>
       </View>
@@ -228,7 +286,23 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 22, fontWeight: "bold", color: "#0A66C2", marginBottom: 4 },
   category: { fontSize: 15, color: "#777", marginBottom: 5 },
-  ownerText: { fontSize: 14, color: "#444", marginBottom: 10, fontStyle: "italic" },
+  ownerText: { fontSize: 14, color: "#444", marginBottom: 4, fontStyle: "italic" },
+  ownerNameClickable: { color: "#0A66C2", fontWeight: "bold" },
+  trustRow: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
+  trustText: { fontSize: 14, color: "#0A66C2", marginLeft: 6 },
+  viewProfileBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    marginBottom: 10,
+    marginTop: 4,
+  },
+  viewProfileText: {
+    color: "#0A66C2",
+    fontWeight: "600",
+    marginLeft: 5,
+    fontSize: 14,
+  },
   priceRow: { flexDirection: "row", alignItems: "center", marginBottom: 15, gap: 10 },
   price: { fontSize: 18, fontWeight: "bold", color: "#16a34a" },
   typeTag: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 8 },

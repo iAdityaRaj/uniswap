@@ -12,21 +12,34 @@ import { signOut } from "firebase/auth";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import Toast from "react-native-toast-message";
 
-export default function ProfileScreen({ navigation }) {
+export default function ProfileScreen({ navigation, route }) {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [newName, setNewName] = useState("");
+  const [trustScore, setTrustScore] = useState(null);
+
+  // 🟢 detect if viewing self or another user
+  const viewingUid = route?.params?.uid || auth.currentUser?.uid;
+  const isOwnProfile = viewingUid === auth.currentUser?.uid;
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const user = auth.currentUser;
-        if (user) {
-          const userDoc = await getDoc(doc(db, "users", user.uid));
-          if (userDoc.exists()) {
-            setUserData(userDoc.data());
-          }
+        if (!viewingUid) return;
+
+        const userDoc = await getDoc(doc(db, "users", viewingUid));
+        if (userDoc.exists()) {
+          setUserData(userDoc.data());
+        }
+
+        // Fetch trust score from backend
+        const res = await fetch(
+          `https://us-central1-uniswap-iitrpr.cloudfunctions.net/getUserByUid?uid=${viewingUid}`
+        );
+        const data = await res.json();
+        if (res.ok && data.trustScore !== undefined) {
+          setTrustScore(data.trustScore);
         }
       } catch (error) {
         console.error("Error fetching user data:", error);
@@ -36,7 +49,7 @@ export default function ProfileScreen({ navigation }) {
     };
 
     fetchUserData();
-  }, []);
+  }, [viewingUid]);
 
   const handleLogout = async () => {
     try {
@@ -98,57 +111,92 @@ export default function ProfileScreen({ navigation }) {
     <View style={styles.container}>
       <Text style={styles.header}>Profile</Text>
 
+      {!isOwnProfile && userData && (
+        <Text style={{ textAlign: "center", color: "#666", marginBottom: 10 }}>
+          Viewing {userData.name}'s Profile
+        </Text>
+      )}
+
       {userData ? (
         <>
           <Text style={styles.label}>Name</Text>
 
-          {editing ? (
-            <View style={styles.editContainer}>
-              <TextInput
-                style={styles.input}
-                value={newName}
-                onChangeText={setNewName}
-                placeholder="Enter new name"
-                placeholderTextColor="#999"
-              />
-              <TouchableOpacity style={styles.saveBtn} onPress={handleSaveName}>
-                <Text style={styles.saveText}>Save</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.cancelBtn}
-                onPress={() => {
-                  setEditing(false);
-                  setNewName("");
-                }}
-              >
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
+          {isOwnProfile ? (
+            editing ? (
+              <View style={styles.editContainer}>
+                <TextInput
+                  style={styles.input}
+                  value={newName}
+                  onChangeText={setNewName}
+                  placeholder="Enter new name"
+                  placeholderTextColor="#999"
+                />
+                <TouchableOpacity
+                  style={styles.saveBtn}
+                  onPress={handleSaveName}
+                >
+                  <Text style={styles.saveText}>Save</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={() => {
+                    setEditing(false);
+                    setNewName("");
+                  }}
+                >
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.rowBetween}>
+                <Text style={styles.value}>{userData.name || "N/A"}</Text>
+                <TouchableOpacity
+                  style={styles.editBtn}
+                  onPress={() => {
+                    setNewName(userData.name || "");
+                    setEditing(true);
+                  }}
+                >
+                  <Text style={styles.editText}>Edit</Text>
+                </TouchableOpacity>
+              </View>
+            )
           ) : (
-            <View style={styles.rowBetween}>
-              <Text style={styles.value}>{userData.name || "N/A"}</Text>
-              <TouchableOpacity
-                style={styles.editBtn}
-                onPress={() => {
-                  setNewName(userData.name || "");
-                  setEditing(true);
-                }}
-              >
-                <Text style={styles.editText}>Edit</Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.value}>{userData.name || "N/A"}</Text>
           )}
 
           <Text style={styles.label}>Email</Text>
           <Text style={styles.value}>{userData.email || "N/A"}</Text>
+
+          {/* 🧠 Trust Score Section */}
+          <View style={styles.trustContainer}>
+            <Text style={styles.trustLabel}>Trust Score</Text>
+            <Text
+              style={[
+                styles.trustValue,
+                {
+                  color:
+                    trustScore >= 10
+                      ? "#16A34A"
+                      : trustScore >= 5
+                      ? "#FACC15"
+                      : "#DC2626",
+                },
+              ]}
+            >
+              {trustScore !== null ? trustScore : "Loading..."}
+            </Text>
+          </View>
         </>
       ) : (
         <Text style={styles.value}>No user data available</Text>
       )}
 
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
+      {isOwnProfile && (
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -242,5 +290,23 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 18,
     fontWeight: "bold",
+  },
+  trustContainer: {
+    backgroundColor: "#E8F4FF",
+    padding: 15,
+    borderRadius: 12,
+    alignItems: "center",
+    marginTop: 10,
+    marginBottom: 30,
+  },
+  trustLabel: {
+    fontSize: 16,
+    color: "#555",
+    fontWeight: "600",
+  },
+  trustValue: {
+    fontSize: 36,
+    fontWeight: "bold",
+    marginTop: 6,
   },
 });

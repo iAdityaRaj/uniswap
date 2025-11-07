@@ -52,10 +52,31 @@ export default function LoginScreen({ navigation }) {
       const userDoc = await getDoc(doc(db, "users", user.uid));
       const userName = userDoc.exists() ? userDoc.data().name : "User";
 
+      // 🔹 Added: Sync user data to backend
+      const backendUrl = "https://uniswap-iitrpr-backend.onrender.com/createOrUpdateUser";
+      try {
+        await fetch(backendUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            uid: user.uid,
+            name: userName,
+            email: user.email,
+          }),
+        });
+        console.log("✅ Synced user to backend successfully.");
+      } catch (err) {
+        console.log("⚠️ Backend sync failed:", err);
+      }
+
       Toast.show({
         type: "success",
         text1: `Welcome back, ${userName}! 👋`,
       });
+
+      // 🔹 Added: Navigate to Home after successful login
+      navigation.replace("Home");
+
     } catch (error) {
       let message = "Login failed. Please try again.";
 

@@ -171,6 +171,7 @@ export default function AppNavigation() {
       <Stack.Screen name="ItemDetails" component={ItemDetailsScreen} />
       <Stack.Screen name="ChatsScreen" component={ChatsScreen} />
       <Stack.Screen name="ChatScreen" component={ChatScreen} />
+       <Stack.Screen name="Profile" component={ProfileScreen} />
     </Stack.Navigator>
   );
 }
