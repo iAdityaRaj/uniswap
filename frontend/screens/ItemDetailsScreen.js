@@ -27,15 +27,10 @@ import {
   increment,
 } from "firebase/firestore";
 
-const BASE_URL = "https://us-central1-uniswap-iitrpr.cloudfunctions.net";
-
 export default function ItemDetailsScreen({ route, navigation }) {
   const { item } = route.params;
   const [wishlisted, setWishlisted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [ownerName, setOwnerName] = useState("Loading...");
-  const [trustScore, setTrustScore] = useState(null);
-  const [loadingTrust, setLoadingTrust] = useState(true);
   const fadeAnim = useState(new Animated.Value(0))[0];
   const toastAnim = useState(new Animated.Value(0))[0];
   const [toastText, setToastText] = useState("");
@@ -59,53 +54,15 @@ export default function ItemDetailsScreen({ route, navigation }) {
     ]).start();
   };
 
-  // ✅ Fetch owner data + trust score
-  useEffect(() => {
-    const fetchOwnerData = async () => {
-      try {
-        if (!item.userId) {
-          setOwnerName("Unknown Owner");
-          return;
-        }
-
-        const userDoc = await getDoc(doc(db, "users", item.userId));
-        if (userDoc.exists()) {
-          const data = userDoc.data();
-          setOwnerName(data.name || "Unknown Owner");
-        }
-
-        const res = await fetch(`${BASE_URL}/getUserByUid?uid=${item.userId}`);
-        const data = await res.json();
-        if (res.ok && data.trustScore !== undefined) {
-          setTrustScore(data.trustScore);
-        } else {
-          setTrustScore("N/A");
-        }
-      } catch (err) {
-        console.error("Error fetching owner data:", err);
-        setOwnerName("Unknown Owner");
-        setTrustScore("N/A");
-      } finally {
-        setLoadingTrust(false);
-      }
-    };
-    fetchOwnerData();
-  }, [item.userId]);
-
-  // ✅ Check if item is wishlisted (from backend)
+  // ✅ Check if wishlisted
   useEffect(() => {
     const checkWishlist = async () => {
       try {
         const user = auth.currentUser;
         if (!user) return;
-
-        const res = await fetch(`${BASE_URL}/getWishlist?uid=${user.uid}`);
-        const data = await res.json();
-
-        if (Array.isArray(data)) {
-          const found = data.some((i) => i.id === item.id);
-          setWishlisted(found);
-        }
+        const docRef = doc(db, "users", user.uid, "wishlist", item.id);
+        const docSnap = await getDoc(docRef);
+        setWishlisted(docSnap.exists());
       } catch (err) {
         console.error("Error checking wishlist:", err);
       } finally {
@@ -120,47 +77,49 @@ export default function ItemDetailsScreen({ route, navigation }) {
     checkWishlist();
   }, [item.id, fadeAnim]);
 
-  // ✅ Toggle wishlist via backend APIs
+  // ✅ Toggle wishlist
   const toggleWishlist = async () => {
     const user = auth.currentUser;
     if (!user) return alert("Please log in first.");
-
     try {
       if (!wishlisted) {
-        const res = await fetch(`${BASE_URL}/addToWishlist`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            uid: user.uid,
-            itemId: item.id,
-          }),
-        });
-
-        if (res.ok) {
-          setWishlisted(true);
-          showToast("✅ Added to Wishlist");
-        }
+        await fetch(
+          "https://us-central1-uniswap-iitrpr.cloudfunctions.net/addToWishlist",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              uid: user.uid,
+              item: {
+                itemId: item.id || item.itemId,
+                title: item.title,
+                price: item.price,
+                imageUrl: item.imageUrl,
+                category: item.category || "Others",
+              },
+            }),
+          }
+        );
+        setWishlisted(true);
+        showToast("✅ Added to Wishlist");
       } else {
-        const res = await fetch(`${BASE_URL}/removeFromWishlist`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            uid: user.uid,
-            itemId: item.id,
-          }),
-        });
-
-        if (res.ok) {
-          setWishlisted(false);
-          showToast("❌ Removed from Wishlist");
-        }
+        await fetch(
+          "https://us-central1-uniswap-iitrpr.cloudfunctions.net/removeFromWishlist",
+          {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ uid: user.uid, itemId: item.id || item.itemId }),
+          }
+        );
+        setWishlisted(false);
+        showToast("❌ Removed from Wishlist");
       }
     } catch (err) {
       console.error("Error toggling wishlist:", err);
     }
   };
 
-  // ✅ Chat with Owner
+  // ✅ Chat with owner
   const handleChatWithOwner = async () => {
     try {
       const user = auth.currentUser;
@@ -218,18 +177,22 @@ export default function ItemDetailsScreen({ route, navigation }) {
             [`readBy.${otherId}`]: false,
             [`unreadCount.${otherId}`]: increment(1),
           });
-        } else {
-          await updateDoc(chatRef, {
-            updatedAt: serverTimestamp(),
-            [`readBy.${user.uid}`]: true,
-          });
         }
       }
 
+      // ✅ Safe fallback to always include itemId
+      const itemIdToPass = item.id || item.itemId || null;
+      console.log("Navigating to chat with itemId:", itemIdToPass, item);
+
       navigation.navigate("ChatScreen", {
-        otherUserId: otherId,
-        itemTitle: item.title,
-      });
+      otherUserId: otherId,
+      itemTitle: item.title,
+      itemId: itemIdToPass,
+      item: {
+        ...item,
+        userId: item.userId || item.ownerId || otherId, 
+      },
+    });
     } catch (err) {
       console.error("Error starting chat:", err);
       alert("Something went wrong. Try again.");
@@ -277,41 +240,6 @@ export default function ItemDetailsScreen({ route, navigation }) {
           <Text style={styles.title}>{item.title}</Text>
           <Text style={styles.category}>{item.category || "Others"}</Text>
 
-          <TouchableOpacity
-            onPress={() =>
-              navigation.navigate("Profile", { uid: item.userId })
-            }
-          >
-            <Text style={styles.ownerText}>
-              Posted by:{" "}
-              <Text style={styles.ownerNameClickable}>{ownerName}</Text>
-            </Text>
-          </TouchableOpacity>
-
-          <View style={styles.trustRow}>
-            <Ionicons
-              name="shield-checkmark-outline"
-              size={16}
-              color="#0A66C2"
-            />
-            <Text style={styles.trustText}>
-              Trust Score:{" "}
-              {loadingTrust
-                ? "Loading..."
-                : trustScore !== null
-                ? trustScore
-                : "N/A"}
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            style={styles.viewProfileBtn}
-            onPress={() => navigation.navigate("Profile", { uid: item.userId })}
-          >
-            <Ionicons name="person-circle-outline" size={18} color="#0A66C2" />
-            <Text style={styles.viewProfileText}>View Owner Profile</Text>
-          </TouchableOpacity>
-
           <View style={styles.priceRow}>
             <Text style={styles.price}>₹{item.price}/day</Text>
             <View
@@ -337,18 +265,23 @@ export default function ItemDetailsScreen({ route, navigation }) {
         </View>
       </Animated.ScrollView>
 
+      {/* 💬 Chat Button */}
       <View
         style={[
           styles.footerContainer,
           { paddingBottom: insets.bottom > 0 ? insets.bottom : 20 },
         ]}
       >
-        <TouchableOpacity style={styles.chatButton} onPress={handleChatWithOwner}>
-          <Ionicons name="chatbubble-ellipses-outline" size={20} color="#fff" />
+        <TouchableOpacity
+          style={styles.chatButton}
+          onPress={handleChatWithOwner}
+        >
+          <Ionicons name="chatbubble-ellipses-outline" size={22} color="#fff" />
           <Text style={styles.chatText}>Chat with Owner</Text>
         </TouchableOpacity>
       </View>
 
+      {/* ✅ Toast */}
       <Animated.View
         style={[
           styles.toast,
@@ -407,30 +340,28 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
-  title: { fontSize: 22, fontWeight: "bold", color: "#0A66C2", marginBottom: 4 },
-  category: { fontSize: 15, color: "#777", marginBottom: 5 },
-  ownerText: { fontSize: 14, color: "#444", marginBottom: 4, fontStyle: "italic" },
-  ownerNameClickable: { color: "#0A66C2", fontWeight: "bold" },
-  trustRow: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
-  trustText: { fontSize: 14, color: "#0A66C2", marginLeft: 6 },
-  viewProfileBtn: {
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#0A66C2",
+    marginBottom: 6,
+  },
+  category: { color: "#666", fontSize: 15, marginBottom: 10 },
+  priceRow: {
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "flex-start",
-    marginBottom: 10,
-    marginTop: 4,
+    marginBottom: 15,
+    justifyContent: "space-between",
   },
-  viewProfileText: {
-    color: "#0A66C2",
-    fontWeight: "600",
-    marginLeft: 5,
-    fontSize: 14,
-  },
-  priceRow: { flexDirection: "row", alignItems: "center", marginBottom: 15, gap: 10 },
-  price: { fontSize: 18, fontWeight: "bold", color: "#16a34a" },
-  typeTag: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 8 },
+  price: { fontSize: 22, fontWeight: "700", color: "#16a34a" },
+  typeTag: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 10 },
   typeText: { color: "#fff", fontWeight: "600" },
-  description: { fontSize: 16, color: "#444", lineHeight: 24, marginBottom: 12 },
+  description: {
+    fontSize: 16,
+    color: "#444",
+    lineHeight: 24,
+    marginBottom: 12,
+  },
   footerContainer: {
     position: "absolute",
     bottom: 0,

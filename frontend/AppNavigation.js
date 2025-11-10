@@ -17,6 +17,7 @@ import ShareItemScreen from "./screens/ShareItemScreen";
 import EditItemScreen from "./screens/EditItemScreen";
 import ItemDetailsScreen from "./screens/ItemDetailsScreen";
 import ChatScreen from "./screens/ChatScreen";
+import MyRentalsScreen from "./screens/MyRentalsScreen";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -85,7 +86,7 @@ function BottomTabs({ navigation }) {
         }}
       >
         <Tab.Screen
-          name="Home"
+          name="HomeScreen"
           component={HomeScreen}
           options={{
             tabBarIcon: ({ color, size }) => (
@@ -130,6 +131,7 @@ function BottomTabs({ navigation }) {
             ),
           }}
         />
+        
       </Tab.Navigator>
 
       {/* ✅ Bottom Sheet */}
@@ -171,7 +173,8 @@ export default function AppNavigation() {
       <Stack.Screen name="ItemDetails" component={ItemDetailsScreen} />
       <Stack.Screen name="ChatsScreen" component={ChatsScreen} />
       <Stack.Screen name="ChatScreen" component={ChatScreen} />
-       <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="MyRentals" component={MyRentalsScreen} />
     </Stack.Navigator>
   );
 }

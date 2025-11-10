@@ -23,14 +23,14 @@ exports.getWishlist = wishlistFunctions.getWishlist;
 
 const rental = require("./rentalFunctions"); 
 const rentalFunctions = require("./rentalFunctions");
-exports.createRental = rentalFunctions.createRental;
-
-exports.markReturned = rentalFunctions.markReturned;
-exports.confirmReturn = rentalFunctions.confirmReturn;
-
 exports.checkRentalReminders = rentalFunctions.checkRentalReminders;
 
-
+exports.createRental = rental.createRental;
+exports.markReturned = rental.markReturned;
+exports.confirmReturn = rental.confirmReturn;
+exports.checkRentalReminders = rental.checkRentalReminders;
+exports.getUserRentals = rental.getUserRentals;
+exports.initializeUser = rental.initializeUser;
 
 exports.restrictSignupDomain = onRequest((req, res) => {
   const { email } = req.body;
@@ -219,7 +219,7 @@ exports.onUserCreate = functions.auth.user().onCreate(async (user) => {
       email: user.email || "",
       displayName: user.displayName || "",
       profilePhotoUrl: user.photoURL || "",
-      trustScore: 5,
+      trustScore: 100,
       listedItemsCount: 0,
       borrowedItemsCount: 0,
       joinedAt: FieldValue.serverTimestamp(),

@@ -1,33 +1,294 @@
+
+
+// const functions = require("firebase-functions");
+// const admin = require("firebase-admin");
+// const { FieldValue } = require("firebase-admin/firestore");
+
+// require("dotenv").config();
+// const sgMail = require("@sendgrid/mail");
+// if (!admin.apps.length) {
+//   admin.initializeApp();
+// }
+
+// const db = admin.firestore();
+
+// /**
+//  * ✅ Create Rental Record
+//  */
+// exports.createRental = functions.https.onRequest(async (req, res) => {
+//   try {
+//     const { itemId, borrowerId, lenderId, startDate, endDate, itemTitle, itemImage } = req.body;
+
+//     if (!itemId || !borrowerId || !lenderId || !startDate || !endDate) {
+//       return res.status(400).json({
+//         error: "Missing required fields: itemId, borrowerId, lenderId, startDate, endDate",
+//       });
+//     }
+
+//     const rentalData = {
+//       itemId,
+//       borrowerId,
+//       lenderId,
+//       startDate: new Date(startDate),
+//       endDate: new Date(endDate),
+//       createdAt: FieldValue.serverTimestamp(),
+//       status: "active",
+//       borrowerMarkedReturn: false,
+//       returnConfirmed: false,
+//       returnDate: null,
+//       itemTitle: itemTitle || null,
+//       itemImage: itemImage || null,
+//     };
+
+//     const rentalRef = await db.collection("rentals").add(rentalData);
+
+//     return res.status(200).json({
+//       message: "Rental created successfully",
+//       rentalId: rentalRef.id,
+//     });
+//   } catch (error) {
+//     console.error("Error creating rental:", error);
+//     return res.status(500).json({ error: error.message });
+//   }
+// });
+
+// /**
+//  * ✅ Borrower marks item as returned
+//  */
+// exports.markReturned = functions.https.onRequest(async (req, res) => {
+//   try {
+//     const { rentalId } = req.body;
+
+//     if (!rentalId) {
+//       return res.status(400).json({ success: false, message: "Missing rentalId" });
+//     }
+
+//     const rentalRef = db.collection("rentals").doc(rentalId);
+//     const snap = await rentalRef.get();
+
+//     if (!snap.exists) {
+//       return res.status(404).json({ success: false, message: "Rental not found" });
+//     }
+
+//     await rentalRef.update({
+//       borrowerMarkedReturn: true, // ✅ proper boolean
+//       status: "active", // still active until lender confirms
+//       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+//     });
+
+//     return res.json({
+//       success: true,
+//       message: "Marked as returned (awaiting lender confirmation)",
+//     });
+//   } catch (err) {
+//     console.error("markReturned error:", err);
+//     return res.status(500).json({ success: false, message: "Server error" });
+//   }
+// });
+
+// /**
+//  * ✅ Lender confirms the return
+//  */
+// exports.confirmReturn = functions.https.onRequest(async (req, res) => {
+//   try {
+//     const { rentalId } = req.body;
+
+//     if (!rentalId) {
+//       return res.status(400).json({ success: false, message: "Missing rentalId" });
+//     }
+
+//     const rentalRef = db.collection("rentals").doc(rentalId);
+//     const snap = await rentalRef.get();
+
+//     if (!snap.exists) {
+//       return res.status(404).json({ success: false, message: "Rental not found" });
+//     }
+
+//     await rentalRef.update({
+//       returnConfirmed: true,
+//       borrowerMarkedReturn: true,
+//       status: "returned",
+//       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+//     });
+
+//     // optional: update borrower trustScore here
+//     const data = snap.data();
+//     if (data.borrowerId) {
+//       const borrowerRef = db.collection("users").doc(data.borrowerId);
+//       await borrowerRef.update({
+//         trustScore: admin.firestore.FieldValue.increment(1),
+//       });
+//     }
+
+//     return res.json({ success: true, message: "Return confirmed successfully" });
+//   } catch (err) {
+//     console.error("confirmReturn error:", err);
+//     return res.status(500).json({ success: false, message: "Server error" });
+//   }
+// });
+
+// /**
+//  * 🔹 Scheduled Function for reminders / overdue handling
+//  */
+// const sendGridKey =
+//   (functions.config().sendgrid && functions.config().sendgrid.key) ||
+//   process.env.SENDGRID_API_KEY;
+// const fromEmail =
+//   (functions.config().sendgrid && functions.config().sendgrid.email) ||
+//   process.env.FROM_EMAIL;
+
+// if (sendGridKey && sendGridKey.startsWith("SG.")) {
+//   sgMail.setApiKey(sendGridKey);
+//   console.log("✅ SendGrid API key loaded successfully");
+// } else {
+//   console.error("🚨 Missing or invalid SendGrid key");
+// }
+
+// async function processRentalReminders() {
+//   const now = new Date();
+//   const upcomingThreshold = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+//   const rentalsSnapshot = await db.collection("rentals").where("status", "==", "active").get();
+//   if (rentalsSnapshot.empty) {
+//     console.log("ℹ️ No active rentals found.");
+//     return;
+//   }
+
+//   const updates = [];
+
+//   for (const doc of rentalsSnapshot.docs) {
+//     const rental = doc.data();
+//     const returnDeadline = rental.returnDeadline?.toDate
+//       ? rental.returnDeadline.toDate()
+//       : new Date(rental.returnDeadline);
+
+//     if (!returnDeadline || isNaN(returnDeadline)) continue;
+
+//     // Reminder email
+//     if (returnDeadline <= upcomingThreshold && !rental.reminderSent) {
+//       console.log(`📧 Sending reminder to ${rental.borrowerEmail}`);
+
+//       const msg = {
+//         to: rental.borrowerEmail,
+//         from: fromEmail,
+//         subject: "⏰ Reminder: Return your rented item soon!",
+//         html: `
+//           <div>
+//             <h3>Hey there 👋</h3>
+//             <p>This is a reminder that your rental <b>${rental.itemTitle}</b> 
+//             is due for return by <b>${returnDeadline.toLocaleString()}</b>.</p>
+//           </div>
+//         `,
+//       };
+
+//       try {
+//         await sgMail.send(msg);
+//         updates.push(doc.ref.update({ reminderSent: true }));
+//       } catch (err) {
+//         console.error(`❌ Failed to send email:`, err.message);
+//       }
+//     }
+
+//     // Overdue handling
+//     if (returnDeadline < now && !rental.returnConfirmed) {
+//       console.log(`⚠️ Overdue: ${rental.itemTitle}`);
+//       updates.push(doc.ref.update({ status: "overdue" }));
+//       const userRef = db.collection("users").doc(rental.borrowerId);
+//       updates.push(userRef.set({ trustScore: admin.firestore.FieldValue.increment(-5) }, { merge: true }));
+//     }
+//   }
+
+//   await Promise.all(updates);
+//   console.log("✅ Reminders + overdue checks complete.");
+// }
+
+// exports.checkRentalReminders = functions.pubsub
+//   .schedule("0 0 * * *")
+//   .timeZone("Asia/Kolkata")
+//   .onRun(async () => {
+//     console.log("⏰ Scheduled rental reminder check started");
+//     await processRentalReminders();
+//     return null;
+//   });
+
+// exports.getUserRentals = functions.https.onRequest(async (req, res) => {
+//   try {
+//     const { uid } = req.query;
+//     if (!uid) return res.status(400).json({ error: "uid required" });
+
+//     const rentalsRef = db.collection("rentals");
+//     const borrowerSnap = await rentalsRef.where("borrowerId", "==", uid).get();
+//     const lenderSnap = await rentalsRef.where("lenderId", "==", uid).get();
+
+//     const rentals = [
+//       ...borrowerSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
+//       ...lenderSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
+//     ];
+
+//     return res.status(200).json(rentals);
+//   } catch (err) {
+//     console.error("❌ getUserRentals error:", err);
+//     return res.status(500).json({ error: err.message });
+//   }
+// });
+
+
+
+
+
+// rentalFunctions.js
+
+
+
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const { FieldValue } = require("firebase-admin/firestore");
-
 require("dotenv").config();
 const sgMail = require("@sendgrid/mail");
+
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 
 const db = admin.firestore();
 
+/* -------------------------------------------------------------------------- */
+/*                              USER INITIALIZATION                           */
+/* -------------------------------------------------------------------------- */
 /**
- * Create Rental Record
- * Endpoint: /createRental
- * Method: POST
- * Body: { itemId, borrowerId, lenderId, startDate, endDate }
+ * ✅ Automatically initialize new users with trustScore = 100
  */
+exports.initializeUser = functions.auth.user().onCreate(async (user) => {
+  try {
+    const userRef = db.collection("users").doc(user.uid);
+    await userRef.set(
+      {
+        email: user.email || null,
+        name: user.displayName || "New User",
+        trustScore: 100,
+        createdAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+    console.log(`✅ Initialized user ${user.uid} with trustScore 100`);
+  } catch (err) {
+    console.error("❌ Error initializing user:", err);
+  }
+});
+
+/* -------------------------------------------------------------------------- */
+/*                             CREATE RENTAL RECORD                           */
+/* -------------------------------------------------------------------------- */
 exports.createRental = functions.https.onRequest(async (req, res) => {
   try {
-    const { itemId, borrowerId, lenderId, startDate, endDate } = req.body;
+    const { itemId, borrowerId, lenderId, startDate, endDate, itemTitle, itemImage } = req.body;
 
-    // Validate required fields
     if (!itemId || !borrowerId || !lenderId || !startDate || !endDate) {
       return res.status(400).json({
         error: "Missing required fields: itemId, borrowerId, lenderId, startDate, endDate",
       });
     }
 
-    // Create rental record
     const rentalData = {
       itemId,
       borrowerId,
@@ -35,15 +296,15 @@ exports.createRental = functions.https.onRequest(async (req, res) => {
       startDate: new Date(startDate),
       endDate: new Date(endDate),
       createdAt: FieldValue.serverTimestamp(),
-      status: "active", // active | returned | overdue
-      reminderSent: false,
+      status: "active",
       borrowerMarkedReturn: false,
       returnConfirmed: false,
       returnDate: null,
+      itemTitle: itemTitle || null,
+      itemImage: itemImage || null,
     };
 
     const rentalRef = await db.collection("rentals").add(rentalData);
-
     return res.status(200).json({
       message: "Rental created successfully",
       rentalId: rentalRef.id,
@@ -54,102 +315,137 @@ exports.createRental = functions.https.onRequest(async (req, res) => {
   }
 });
 
-// ✅ Borrower marks an item as returned
+/* -------------------------------------------------------------------------- */
+/*                          BORROWER MARKS RETURNED                           */
+/* -------------------------------------------------------------------------- */
 exports.markReturned = functions.https.onRequest(async (req, res) => {
   try {
     const { rentalId } = req.body;
-    if (!rentalId) return res.status(400).json({ error: "rentalId is required" });
+
+    if (!rentalId) {
+      return res.status(400).json({ success: false, message: "Missing rentalId" });
+    }
 
     const rentalRef = db.collection("rentals").doc(rentalId);
-    const rental = await rentalRef.get();
+    const snap = await rentalRef.get();
 
-    if (!rental.exists)
-      return res.status(404).json({ error: "Rental not found" });
+    if (!snap.exists) {
+      return res.status(404).json({ success: false, message: "Rental not found" });
+    }
 
     await rentalRef.update({
       borrowerMarkedReturn: true,
-      returnDate: FieldValue.serverTimestamp(),
+      status: "active", // still active until lender confirms
+      updatedAt: FieldValue.serverTimestamp(),
     });
 
-    return res.status(200).json({ message: "Item marked as returned by borrower" });
+    return res.json({
+      success: true,
+      message: "Marked as returned (awaiting lender confirmation)",
+    });
   } catch (err) {
-    console.error("Error marking return:", err);
-    return res.status(500).json({ error: err.message });
+    console.error("markReturned error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
-
-// ✅ Lender confirms the return
+/* -------------------------------------------------------------------------- */
+/*                          LENDER CONFIRMS RETURN                            */
+/* -------------------------------------------------------------------------- */
+/**
+ * ✅ Updates trustScore and posts message to chat
+ * +20 if on time, -20 if late
+ */
 exports.confirmReturn = functions.https.onRequest(async (req, res) => {
   try {
     const { rentalId } = req.body;
-    if (!rentalId) {
-      return res.status(400).json({ error: "rentalId is required" });
-    }
+    if (!rentalId) return res.status(400).json({ success: false, message: "Missing rentalId" });
 
     const rentalRef = db.collection("rentals").doc(rentalId);
-    const rentalSnap = await rentalRef.get();
+    const snap = await rentalRef.get();
+    if (!snap.exists) return res.status(404).json({ success: false, message: "Rental not found" });
 
-    if (!rentalSnap.exists) {
-      return res.status(404).json({ error: "Rental not found" });
-    }
+    const rentalData = snap.data();
+    const now = new Date();
+    const endDate = rentalData.endDate?.toDate
+      ? rentalData.endDate.toDate()
+      : new Date(rentalData.endDate);
+    const isOnTime = !isNaN(endDate) ? now <= endDate : true;
 
-    const data = rentalSnap.data();
+    // Update rental record
+    await rentalRef.update({
+      returnConfirmed: true,
+      borrowerMarkedReturn: true,
+      status: "returned",
+      returnDate: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+      returnedLate: !isOnTime,
+    });
 
-    if (!data.borrowerMarkedReturn) {
-      return res
-        .status(400)
-        .json({ error: "Borrower has not marked the item as returned yet" });
-    }
+    // Update trustScore logic
+    if (rentalData.borrowerId) {
+      const borrowerRef = db.collection("users").doc(rentalData.borrowerId);
+      const borrowerSnap = await borrowerRef.get();
+      const BASE = 100;
+      const CHANGE = isOnTime ? 20 : -20;
 
-    // Safely extract and convert timestamps
-    const returnDate = data.returnDate?.toDate
-      ? data.returnDate.toDate()
-      : new Date(data.returnDate);
-    const returnDeadline = data.returnDeadline?.toDate
-      ? data.returnDeadline.toDate()
-      : new Date(data.returnDeadline);
+      if (!borrowerSnap.exists) {
+        await borrowerRef.set(
+          {
+            trustScore: BASE + CHANGE,
+            createdAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      } else {
+        const borrowerData = borrowerSnap.data();
+        const current = typeof borrowerData.trustScore === "number" ? borrowerData.trustScore : BASE;
+        await borrowerRef.set(
+          {
+            trustScore: current + CHANGE,
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      }
 
-    console.log(
-      `🧾 returnDate: ${returnDate?.toISOString?.() || returnDate}, returnDeadline: ${
-        returnDeadline?.toISOString?.() || returnDeadline
-      }`
-    );
+      // ✅ Optional: Post system message to chat
+      const chatId = [rentalData.borrowerId, rentalData.lenderId].sort().join("_");
+      const messageText = isOnTime
+        ? `✅ Borrower returned "${rentalData.itemTitle}" on time (+20 trustScore)`
+        : `⚠️ Borrower returned "${rentalData.itemTitle}" late (-20 trustScore)`;
 
-    // Compare returnDate and returnDeadline
-    if (returnDate <= returnDeadline) {
-      console.log(`✅ ${data.borrowerId} returned on time. Trust score +5 applied.`);
+      await db.collection("chats").doc(chatId).collection("messages").add({
+        text: messageText,
+        type: "system",
+        createdAt: FieldValue.serverTimestamp(),
+      });
 
-      const userRef = db.collection("users").doc(data.borrowerId);
-      await userRef.set(
+      await db.collection("chats").doc(chatId).set(
         {
-          trustScore: admin.firestore.FieldValue.increment(5),
+          lastMessage: messageText,
+          lastMessageAt: FieldValue.serverTimestamp(),
         },
         { merge: true }
       );
-    } else {
-      console.log(`⚠️ ${data.borrowerId} returned late. No trust bonus applied.`);
     }
 
-    await rentalRef.update({
-      returnConfirmed: true,
-      status: "returned",
+    return res.json({
+      success: true,
+      message: isOnTime
+        ? "✅ Return confirmed — borrower returned on time (+20 trustScore)"
+        : "⚠️ Return confirmed — borrower returned late (-20 trustScore)",
     });
-
-    return res.status(200).json({ message: "Return confirmed successfully" });
   } catch (err) {
-    console.error("Error confirming return:", err);
-    return res.status(500).json({ error: err.message });
+    console.error("confirmReturn error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
-
-
-
-// 🔹 Scheduled Function: Runs every day at midnight
-// rentalFunctions.js
-
-
+/* -------------------------------------------------------------------------- */
+/*                       REMINDER + OVERDUE CHECK (CRON)                     */
+/* -------------------------------------------------------------------------- */
 const sendGridKey =
   (functions.config().sendgrid && functions.config().sendgrid.key) ||
   process.env.SENDGRID_API_KEY;
@@ -157,97 +453,104 @@ const fromEmail =
   (functions.config().sendgrid && functions.config().sendgrid.email) ||
   process.env.FROM_EMAIL;
 
-if (sendGridKey && sendGridKey.startsWith("SG.")) {
+if (sendGridKey?.startsWith("SG.")) {
   sgMail.setApiKey(sendGridKey);
-  console.log("✅ SendGrid API key loaded successfully");
+  console.log("✅ SendGrid configured");
 } else {
-  console.error("🚨 SendGrid API key is missing or invalid! Please set it with firebase functions:config:set");
+  console.warn("⚠️ SendGrid key not found — email reminders disabled");
 }
 
-// 🧠 Shared logic (used by both scheduled + manual trigger)
 async function processRentalReminders() {
   const now = new Date();
   const upcomingThreshold = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
-  const rentalsSnapshot = await db
-    .collection("rentals")
-    .where("status", "==", "ongoing")
-    .get();
+  const rentalsSnap = await db.collection("rentals").where("status", "==", "active").get();
+  if (rentalsSnap.empty) return console.log("ℹ️ No active rentals found.");
 
-  if (rentalsSnapshot.empty) {
-    console.log("ℹ️ No active rentals to process.");
-    return;
-  }
+  const ops = [];
 
-  const updates = [];
-
-  for (const doc of rentalsSnapshot.docs) {
+  for (const doc of rentalsSnap.docs) {
     const rental = doc.data();
+    const ref = doc.ref;
+
     const returnDeadline =
-    rental.returnDeadline && rental.returnDeadline.toDate
-    ? rental.returnDeadline.toDate()
-    : new Date(rental.returnDeadline);
+      rental.endDate?.toDate?.() || new Date(rental.endDate || rental.returnDeadline);
+    if (!returnDeadline || isNaN(returnDeadline)) continue;
 
-    console.log(`🕓 Checking rental: ${doc.id}, deadline: ${returnDeadline}`);
-
-    if (!returnDeadline || isNaN(returnDeadline)) {
-      console.log(`⚠️ Skipping ${doc.id} - invalid returnDeadline`);
-      continue;
-    }
-
-    // 1️⃣ Reminder before deadline
+    // Reminder 24h before deadline
     if (returnDeadline <= upcomingThreshold && !rental.reminderSent) {
-      console.log(`📧 Sending reminder to ${rental.borrowerEmail} for ${rental.itemTitle}`);
-
-      const msg = {
-        to: rental.borrowerEmail,
-        from: fromEmail,
-        subject: "⏰ Reminder: Return your rented item soon!",
-        html: `
-          <div style="font-family:Arial,sans-serif;">
-            <h3>Hey there 👋</h3>
-            <p>This is a friendly reminder that your rental item <b>${rental.itemTitle}</b>
-            is due for return by <b>${returnDeadline.toLocaleString("en-IN")}</b>.</p>
-            <p>Please make sure to return it on time to maintain your trust score.</p>
-          </div>
-        `,
-      };
-
-      try {
-        await sgMail.send(msg);
-        console.log(`✅ Email sent to ${rental.borrowerEmail}`);
-        updates.push(doc.ref.update({ reminderSent: true }));
-      } catch (err) {
-        console.error(`❌ Email send failed:`, err.message);
+      if (sendGridKey?.startsWith("SG.") && rental.borrowerEmail) {
+        const msg = {
+          to: rental.borrowerEmail,
+          from: fromEmail,
+          subject: "⏰ Reminder: Return your rented item soon!",
+          html: `<p>Your rental <b>${rental.itemTitle}</b> is due by <b>${returnDeadline.toLocaleString()}</b>.</p>`,
+        };
+        try {
+          await sgMail.send(msg);
+          ops.push(ref.update({ reminderSent: true }));
+        } catch (err) {
+          console.error("❌ Failed to send reminder:", err);
+        }
       }
     }
 
-    // 2️⃣ Overdue handling
-    if (returnDeadline < now && !rental.returnConfirmed) {
-      console.log(`⚠️ Overdue item: ${rental.itemTitle} (Borrower: ${rental.borrowerId})`);
+    // Overdue logic
+    if (returnDeadline < now && !rental.returnConfirmed && rental.status !== "overdue") {
+      console.log(`⚠️ Marking rental ${doc.id} as overdue`);
+      ops.push(ref.update({ status: "overdue", updatedAt: FieldValue.serverTimestamp() }));
 
-      updates.push(doc.ref.update({ status: "overdue" }));
-
-      const userRef = db.collection("users").doc(rental.borrowerId);
-      updates.push(
-        userRef.set({ trustScore: admin.firestore.FieldValue.increment(-5) }, { merge: true })
-      );
+      if (rental.borrowerId) {
+        const borrowerRef = db.collection("users").doc(rental.borrowerId);
+        const borrowerSnap = await borrowerRef.get();
+        const BASE = 100;
+        const CHANGE = -20;
+        const borrowerData = borrowerSnap.exists ? borrowerSnap.data() : {};
+        const current = typeof borrowerData.trustScore === "number" ? borrowerData.trustScore : BASE;
+        await borrowerRef.set(
+          {
+            trustScore: current + CHANGE,
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      }
     }
   }
 
-  await Promise.all(updates);
-  console.log("✅ Rental reminders + trust score checks complete.");
+  await Promise.all(ops);
+  console.log("✅ Rental reminder & overdue checks complete.");
 }
 
-// ⏰ Scheduled function
 exports.checkRentalReminders = functions.pubsub
   .schedule("0 0 * * *")
   .timeZone("Asia/Kolkata")
   .onRun(async () => {
-    console.log("⏰ Scheduled rental reminder check started");
+    console.log("⏰ Scheduled reminder check started");
     await processRentalReminders();
     return null;
   });
 
-// 🚀 Export shared logic for manual trigger
-exports.processRentalReminders = processRentalReminders;
+/* -------------------------------------------------------------------------- */
+/*                            FETCH USER RENTALS                              */
+/* -------------------------------------------------------------------------- */
+exports.getUserRentals = functions.https.onRequest(async (req, res) => {
+  try {
+    const { uid } = req.query;
+    if (!uid) return res.status(400).json({ error: "uid required" });
+
+    const rentalsRef = db.collection("rentals");
+    const borrowerSnap = await rentalsRef.where("borrowerId", "==", uid).get();
+    const lenderSnap = await rentalsRef.where("lenderId", "==", uid).get();
+
+    const rentals = [
+      ...borrowerSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
+      ...lenderSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
+    ];
+
+    return res.status(200).json(rentals);
+  } catch (err) {
+    console.error("❌ getUserRentals error:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
