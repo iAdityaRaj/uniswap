@@ -525,7 +525,17 @@ export default function ChatScreen({ route, navigation }) {
     itemTitle: itemTitleParam,
   } = route.params || {};
 
-  const me = auth.currentUser;
+  // const me = auth.currentUser;
+  const [me, setMe] = useState(auth.currentUser);
+
+useEffect(() => {
+  const unsubscribe = auth.onAuthStateChanged((user) => {
+    if (user) setMe(user);
+  });
+  return unsubscribe;
+}, []);
+
+
   const otherId = otherUserId;
   const chatId =
     chatIdParam || (me && otherId ? [me.uid, otherId].sort().join("_") : null);
@@ -557,13 +567,20 @@ export default function ChatScreen({ route, navigation }) {
 
   // ✅ Ensure chat exists
   useEffect(() => {
-    const ensureChat = async () => {
-      if (!me || !otherId || !chatId) return;
+  const ensureChat = async () => {
+    if (!me?.uid || !otherId || !chatId) {
+      console.log("⏳ Waiting for user or chat data:", { me, otherId, chatId });
+      return;
+    }
+
+    try {
       const ref = doc(db, "chats", chatId);
       const snap = await getDoc(ref);
+
       if (!snap.exists()) {
+        console.log("🆕 Creating chat document:", chatId);
         await setDoc(ref, {
-          users: [me.uid, otherId],
+          users: [me.uid, otherId].filter(Boolean),
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
           lastMessage: "",
@@ -572,9 +589,13 @@ export default function ChatScreen({ route, navigation }) {
           unreadCount: { [me.uid]: 0, [otherId]: 0 },
         });
       }
-    };
-    ensureChat();
-  }, [me, otherId, chatId]);
+    } catch (err) {
+      console.error("🔥 Error creating chat:", err);
+    }
+  };
+
+  ensureChat();
+}, [me, otherId, chatId]);
 
   // ✅ Fetch other user info
   useEffect(() => {
