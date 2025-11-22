@@ -35,6 +35,8 @@ export default function LoginScreen({ navigation }) {
   };
 
   const handleLogin = async () => {
+    {validateEmailInstant}
+
     if (!emailValidated) {
       Toast.show({
         type: "error",
@@ -135,12 +137,14 @@ export default function LoginScreen({ navigation }) {
 
         {/* Email Input */}
         <TextInput
-          placeholder="IIT Ropar Email"
+          placeholder="Enter your college email"
           keyboardType="email-address"
           autoCapitalize="none"
           value={email}
           onChangeText={setEmail}
-          onEndEditing={validateEmailInstant}
+          placeholderTextColor="#a79b9bff"
+
+          // onEndEditing={validateEmailInstant}
           style={{
             borderWidth: 1,
             borderColor: "#ccc",
@@ -157,8 +161,9 @@ export default function LoginScreen({ navigation }) {
             placeholder="Password"
             secureTextEntry={!showPassword}
             value={password}
-            onFocus={validateEmailInstant}
+            // onFocus={validateEmailInstant}
             onChangeText={setPassword}
+            placeholderTextColor="#a79b9bff"
             style={{
               borderWidth: 1,
               borderColor: "#ccc",
