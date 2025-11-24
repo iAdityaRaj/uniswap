@@ -1,30 +1,35 @@
-import React, { useState, useEffect } from "react";
-import { View, TouchableOpacity, StyleSheet, Modal, Pressable, Text } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { Ionicons } from "@expo/vector-icons";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { useEffect, useState } from "react";
+import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { auth, db } from "./firebaseConfig";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
 
-import HomeScreen from "./screens/HomeScreen";
-import ChatsScreen from "./screens/ChatsScreen";
 import AddItemScreen from "./screens/AddItemScreen";
+import ChatScreen from "./screens/ChatScreen";
+import ChatsScreen from "./screens/ChatsScreen";
+import EditItemScreen from "./screens/EditItemScreen";
+import HomeScreen from "./screens/HomeScreen";
+import ItemDetailsScreen from "./screens/ItemDetailsScreen";
+import LoginScreen from "./screens/LoginScreen";
 import MyAdsScreen from "./screens/MyAdsScreen";
+import MyRentalsScreen from "./screens/MyRentalsScreen";
+import NotificationSettingsScreen from "./screens/NotificationSettingsScreen"; // Add this import
 import ProfileScreen from "./screens/ProfileScreen";
 import RentItemScreen from "./screens/RentItemScreen";
 import ShareItemScreen from "./screens/ShareItemScreen";
-import EditItemScreen from "./screens/EditItemScreen";
-import ItemDetailsScreen from "./screens/ItemDetailsScreen";
-import ChatScreen from "./screens/ChatScreen";
-import MyRentalsScreen from "./screens/MyRentalsScreen";
+import SignupScreen from "./screens/SignupScreen";
+import SplashScreen from "./screens/SplashScreen";
+import WelcomeScreen from "./screens/WelcomeScreen";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
 function BottomTabs({ navigation }) {
   const [sheetVisible, setSheetVisible] = useState(false);
-  const [unreadChats, setUnreadChats] = useState(0); // ✅ badge state
+  const [unreadChats, setUnreadChats] = useState(0);
 
   // ✅ Live unread chat count
   useEffect(() => {
@@ -166,6 +171,13 @@ function BottomTabs({ navigation }) {
 export default function AppNavigation() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
+      {/* Authentication Flow */}
+      <Stack.Screen name="Splash" component={SplashScreen} />
+      <Stack.Screen name="Welcome" component={WelcomeScreen} />
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Signup" component={SignupScreen} />
+      
+      {/* Main App */}
       <Stack.Screen name="Tabs" component={BottomTabs} />
       <Stack.Screen name="RentItem" component={RentItemScreen} />
       <Stack.Screen name="ShareItem" component={ShareItemScreen} />
@@ -175,6 +187,9 @@ export default function AppNavigation() {
       <Stack.Screen name="ChatScreen" component={ChatScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="MyRentals" component={MyRentalsScreen} />
+      
+      {/* Notification Settings Screen - ADDED THIS LINE */}
+      <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
     </Stack.Navigator>
   );
 }
