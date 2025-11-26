@@ -68,7 +68,7 @@ const fetchWishlist = async () => {
           data={wishlistItems}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <ItemCard item={item} navigation={navigation} />
+            <ItemCard item={item} navigation={navigation} ownerId={item.userId || item.ownerId} />
           )}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.list}

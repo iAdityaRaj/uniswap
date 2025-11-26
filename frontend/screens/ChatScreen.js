@@ -86,8 +86,9 @@ useEffect(() => {
 
   // ✅ Ensure chat exists
   useEffect(() => {
-  const ensureChat = async () => {
-    if (!me?.uid || !otherId || !chatId) {
+      const ensureChat = async () => {
+    // don't try to create the chat until we have a logged-in user and a chatId
+    if (!me?.uid || !chatId) {
       console.log("⏳ Waiting for user or chat data:", { me, otherId, chatId });
       return;
     }
@@ -98,14 +99,26 @@ useEffect(() => {
 
       if (!snap.exists()) {
         console.log("🆕 Creating chat document:", chatId);
+
+        // Build everything without ever using an undefined key
+        const users = [me.uid];
+        const readBy = { [me.uid]: true };
+        const unreadCount = { [me.uid]: 0 };
+
+        if (otherId) {
+          users.push(otherId);
+          readBy[otherId] = false;
+          unreadCount[otherId] = 0;
+        }
+
         await setDoc(ref, {
-          users: [me.uid, otherId].filter(Boolean),
+          users,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
           lastMessage: "",
           lastSenderId: "",
-          readBy: { [me.uid]: true, [otherId]: false },
-          unreadCount: { [me.uid]: 0, [otherId]: 0 },
+          readBy,
+          unreadCount,
         });
       }
     } catch (err) {
