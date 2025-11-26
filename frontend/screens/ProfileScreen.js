@@ -33,7 +33,7 @@ export default function ProfileScreen({ navigation, route }) {
   const viewingUid = route?.params?.uid || auth.currentUser?.uid;
   const isOwnProfile = viewingUid === auth.currentUser?.uid;
 
-  // ✅ Real-time Firestore listener for any user's data (including trustScore)
+  // ✅ Real-time Firestore listener for any user's data
   useEffect(() => {
     if (!viewingUid) return;
     const unsub = onSnapshot(doc(db, "users", viewingUid), (snap) => {
@@ -140,8 +140,8 @@ export default function ProfileScreen({ navigation, route }) {
                     placeholderTextColor="#999"
                     autoFocus={true}
                     returnKeyType="done"
-                    blurOnSubmit={false}            // important: prevents blur on submit
-                    onSubmitEditing={handleSaveName} // handy: pressing done saves
+                    blurOnSubmit={false}
+                    onSubmitEditing={handleSaveName}
                     keyboardAppearance="default"
                   />
                   <TouchableOpacity style={styles.saveBtn} onPress={handleSaveName}>
@@ -178,7 +178,7 @@ export default function ProfileScreen({ navigation, route }) {
             <Text style={styles.label}>Email</Text>
             <Text style={styles.value}>{userData.email || "Hidden"}</Text>
 
-            {/* ✅ Trust Score Display (visible to everyone) */}
+            {/* ✅ Trust Score Display */}
             <View style={styles.trustContainer}>
               <Text style={styles.trustLabel}>Trust Score</Text>
               <Text style={[styles.trustValue, { color: trustColor }]}>
@@ -199,16 +199,6 @@ export default function ProfileScreen({ navigation, route }) {
                     <Text style={styles.menuText}>My Rentals</Text>
                     <Ionicons name="chevron-forward" size={20} color="#6B7280" />
                   </TouchableOpacity>
-
-                  {/* ✅ ADDED NOTIFICATION SETTINGS MENU ITEM */}
-                  {/* <TouchableOpacity 
-                    style={styles.menuItem}
-                    onPress={() => navigation.navigate("NotificationSettings")}
-                  >
-                    <Ionicons name="notifications-outline" size={24} color="#0A66C2" />
-                    <Text style={styles.menuText}>Notification Settings</Text>
-                    <Ionicons name="chevron-forward" size={20} color="#6B7280" />
-                  </TouchableOpacity> */}
                 </View>
 
                 <Text style={styles.sectionTitle}>My Wishlist ❤️</Text>
@@ -246,7 +236,8 @@ export default function ProfileScreen({ navigation, route }) {
           <Ionicons name="chevron-forward" size={20} color="#888" />
         </TouchableOpacity>
       )}
-      ListHeaderComponent={renderHeader}
+      // ✅ FIX IS HERE: execute the function with ()
+      ListHeaderComponent={renderHeader()}
       ListEmptyComponent={
         isOwnProfile ? (
           loadingWishlist ? (
@@ -355,8 +346,6 @@ const styles = StyleSheet.create({
   itemTitle: { fontSize: 16, fontWeight: "600", color: "#111" },
   itemPrice: { fontSize: 14, color: "#16A34A" },
   emptyText: { color: "#888", textAlign: "center", marginTop: 10 },
-  
-  // ✅ NEW STYLES FOR MENU ITEMS
   menuContainer: {
     backgroundColor: "#fff",
     borderRadius: 12,
@@ -382,6 +371,3 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
 });
-
-
-
