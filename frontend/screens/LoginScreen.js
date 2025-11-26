@@ -2,6 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
 import { collection, doc, getCountFromServer, getDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
+
+
 import {
   KeyboardAvoidingView,
   Platform,
@@ -9,6 +11,8 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  Image,
+  StyleSheet,
   View,
 } from "react-native";
 import Toast from "react-native-toast-message";
@@ -109,10 +113,11 @@ export default function LoginScreen({ navigation }) {
         text2: "Login successful!",
       });
 
-      // ✅ FIXED: Changed from "Home" to "Tabs"
       setTimeout(() => {
         navigation.replace("Tabs");
       }, 1500);
+
+      
 
     } catch (error) {
       console.log("Login error:", error.code, error.message);
@@ -331,7 +336,7 @@ export default function LoginScreen({ navigation }) {
         }}
         keyboardShouldPersistTaps="handled"
       >
-        <Text
+        {/* <Text
           style={{
             fontSize: 24,
             fontWeight: "bold",
@@ -341,9 +346,12 @@ export default function LoginScreen({ navigation }) {
           }}
         >
           Login to UniSwap
-        </Text>
+        </Text> */}
 
-        {/* Active Users Counter */}
+        <View style={styles.logoWrap}>
+  <Image source={require("../assets/uniswapLogo.jpg")} style={styles.logo} />
+</View>
+
         <View style={{
           backgroundColor: '#F0F8FF',
           padding: 15,
@@ -482,3 +490,30 @@ export default function LoginScreen({ navigation }) {
     </KeyboardAvoidingView>
   );
 }
+
+
+const styles = StyleSheet.create({
+  logoWrap: {
+  width: "100%",              // fills device width
+  paddingHorizontal: 14,      // slight spacing from edges so rounding looks clean
+  alignItems: "center",
+  justifyContent: "center",
+  marginBottom: 18,
+},
+logo: {
+  width: "100%",              // auto banner width
+  height: undefined,          // let aspect ratio decide height
+  aspectRatio: 16 / 9,        // adjust if needed (controls height relative to width)
+  resizeMode: "cover",
+  borderRadius: 30,           // rounded corners
+  overflow: "hidden",         // ensures corners clip image
+  elevation: 6,               
+  shadowColor: "#000",        
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.15,
+  shadowRadius: 8,
+}
+});
+
+
+
