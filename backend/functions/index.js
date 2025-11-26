@@ -15,11 +15,13 @@ const db = admin.firestore();
 require("dotenv").config();
 
 
+
 const wishlistFunctions = require("./wishlistFunctions");
 exports.addToWishlist = wishlistFunctions.addToWishlist;
 exports.removeFromWishlist = wishlistFunctions.removeFromWishlist;
 exports.getWishlist = wishlistFunctions.getWishlist;
 
+exports.notifyProposalEmail = require("./notifyFunctions").notifyProposalEmail;
 
 const rental = require("./rentalFunctions"); 
 const rentalFunctions = require("./rentalFunctions");
@@ -252,7 +254,7 @@ exports.onUserCreate = functions.auth.user().onCreate(async (user) => {
 // CRUD 
 
 
-// exports.addItem = functions.https.onRequest(async (req, res) => {
+//  exports.addItem = functions.https.onRequest(async (req, res) => {
 //   try {
 //     console.log("Incoming request method:", req.method);
 //     console.log("Incoming body:", req.body);
