@@ -22,7 +22,7 @@ export default function WelcomeScreen({ navigation }) {
 
   const handleGetStarted = () => {
     markAsSeen();
-    navigation.navigate('Login');
+    navigation.navigate('Signup');
   };
 
   const handleSkip = () => {
@@ -88,7 +88,7 @@ export default function WelcomeScreen({ navigation }) {
 
         <TouchableOpacity 
           style={styles.secondaryButton}
-          onPress={handleGetStarted}
+          onPress={handleSkip}
         >
           <Text style={styles.secondaryButtonText}>I already have an account</Text>
         </TouchableOpacity>

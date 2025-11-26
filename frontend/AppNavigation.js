@@ -23,6 +23,7 @@ import ShareItemScreen from "./screens/ShareItemScreen";
 import SignupScreen from "./screens/SignupScreen";
 import SplashScreen from "./screens/SplashScreen";
 import WelcomeScreen from "./screens/WelcomeScreen";
+import OTPScreen from './screens/OTPScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -176,6 +177,7 @@ export default function AppNavigation() {
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Signup" component={SignupScreen} />
+      <Stack.Screen name="OTPScreen" component={OTPScreen} />
       
       {/* Main App */}
       <Stack.Screen name="Tabs" component={BottomTabs} />

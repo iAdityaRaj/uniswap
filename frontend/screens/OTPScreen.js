@@ -48,6 +48,7 @@ export default function OTPScreen({ route, navigation }) {
         name,
         email,
         joinedAt: new Date(),
+        trustScore: 100, // Optional: Add default trust score
       });
 
       Toast.show({
@@ -56,7 +57,8 @@ export default function OTPScreen({ route, navigation }) {
         text2: `Welcome, ${name}!`,
       });
 
-      navigation.replace("Login");
+      // Usually better to replace with Main App or Login
+      navigation.replace("Login"); 
     } catch (error) {
       Toast.show({
         type: "error",
@@ -109,6 +111,7 @@ export default function OTPScreen({ route, navigation }) {
       <TextInput
         style={styles.otpInput}
         placeholder="Enter 6-digit OTP"
+        placeholderTextColor="#888" // ✅ FIX: Makes placeholder visible (Dark Gray)
         keyboardType="numeric"
         maxLength={6}
         value={otp}
@@ -167,6 +170,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     textAlign: "center",
     marginBottom: 20,
+    color: "#000", // ✅ FIX: Ensures typed numbers are black and visible
   },
   button: {
     width: "80%",
