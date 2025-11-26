@@ -209,159 +209,44 @@ exports.restrictSignupDomain = onRequest((req, res) => {
 //user modules
 
 
+// consolidated onCreate handler — keep only ONE of these in your functions file
 exports.onUserCreate = functions.auth.user().onCreate(async (user) => {
   try {
     const uid = user.uid;
     const userRef = db.collection("users").doc(uid);
 
+    // Use a stable fallback for displayName: prefer auth displayName,
+    // otherwise use the email local part, otherwise "New User"
+    let displayName = "";
+    if (user.displayName && user.displayName.trim() !== "") {
+      displayName = user.displayName;
+    } else if (user.email) {
+      displayName = user.email.split("@")[0] || "New User";
+    } else {
+      displayName = "New User";
+    }
+
     const userData = {
       uid,
       email: user.email || "",
-      displayName: user.displayName || "",
+      displayName,
       profilePhotoUrl: user.photoURL || "",
+      // desired default trust score:
       trustScore: 100,
       listedItemsCount: 0,
       borrowedItemsCount: 0,
       joinedAt: FieldValue.serverTimestamp(),
     };
 
+    // Use set with merge true so we don't delete other fields accidentally
     await userRef.set(userData, { merge: true });
-    console.log(`✅ Firestore user document created for UID: ${uid}`);
+
+    console.log(`✅ Firestore user document created for UID: ${uid}, trustScore=${userData.trustScore}`);
   } catch (err) {
     console.error("❌ Error creating user document:", err);
   }
 });
 
-
-// Get user by UID
-exports.getUserByUid = functions.https.onRequest(async (req, res) => {
-  try {
-    if (req.method !== "GET")
-      return res.status(405).json({ error: "Method not allowed" });
-
-  if (!email || typeof email !== "string") {
-    return res.status(400).json({ error: "Valid email is required" });
-  }
-
-  const allowedDomain = "iitrpr.ac.in";
-  const emailParts = email.trim().toLowerCase().split("@");
-    const uid = req.query.uid;
-    if (!uid) return res.status(400).json({ error: "UID is required" });
-
-    const doc = await db.collection("users").doc(uid).get();
-    if (!doc.exists) return res.status(404).json({ error: "User not found" });
-
-    return res.status(200).json({ id: doc.id, ...doc.data() });
-  } catch (err) {
-    console.error("Error getting user:", err);
-    return res.status(500).json({ error: err.message || "Internal server error" });
-  }
-});
-
-
-//  Update user profile (manually via API if needed)
-exports.updateUser = functions.https.onRequest(async (req, res) => {
-  try {
-    if (req.method !== "PATCH" && req.method !== "PUT") {
-      return res.status(405).json({ error: "Method not allowed" });
-    }
-
-    const { uid, displayName, profilePhotoUrl, bio } = req.body;
-
-    if (!uid) {
-      return res.status(400).json({ error: "UID is required" });
-    }
-
-    const userRef = db.collection("users").doc(uid);
-
-    const updates = {};
-    if (displayName) updates.displayName = displayName;
-    if (profilePhotoUrl) updates.profilePhotoUrl = profilePhotoUrl;
-    if (bio) updates.bio = bio;
-    updates.updatedAt = FieldValue.serverTimestamp();
-
-    await userRef.update(updates);
-
-    return res.status(200).json({ message: "User updated successfully" });
-  } catch (error) {
-    console.error("Error updating user:", error);
-    return res.status(500).json({ error: "Internal Server Error" });
-  }
-});
-
-
-//Get all items listed by a specific user
-
-
-exports.getUserItems = functions.https.onRequest(async (req, res) => {
-  try {
-    const uid = req.query.uid;
-    if (!uid) {
-      return res.status(400).json({ error: "User UID is required" });
-    }
-
-    console.log("🔍 Fetching all items to debug...");
-
-    const allItemsSnapshot = await db.collection("items").get();
-    allItemsSnapshot.forEach((doc) => {
-      console.log("Doc:", doc.id, doc.data());
-    });
-
-    console.log("Filtering by UID:", uid);
-
-    const snapshot = await db
-      .collection("items")
-      .where("ownerUid", "==", uid)
-      .orderBy("createdAt", "desc")
-      .get();
-
-    console.log("✅ Total items found:", snapshot.size);
-
-    const items = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-
-    return res.status(200).json(items);
-  } catch (err) {
-    console.error("❌ Error fetching user items:", err);
-    return res.status(500).json({ error: err.message });
-  }
-});
-
-
-//  Create or Update User Document
-exports.createOrUpdateUser = functions.https.onRequest(async (req, res) => {
-  try {
-    if (req.method !== "POST") {
-      return res.status(405).json({ error: "Method not allowed" });
-    }
-
-    const { uid, email, displayName, profilePhotoUrl, bio } = req.body;
-
-    if (!uid || !email) {
-      return res.status(400).json({ error: "UID and email are required" });
-    }
-
-    const userRef = db.collection("users").doc(uid);
-
-    const userData = {
-      uid,
-      email,
-      displayName: displayName || "",
-      profilePhotoUrl: profilePhotoUrl || "",
-      bio: bio || "",
-      updatedAt: FieldValue.serverTimestamp(),
-    };
-
-    await userRef.set(userData, { merge: true });
-
-    return res.status(200).json({ message: "User created/updated", uid });
-  } catch (error) {
-    console.error("Error in createOrUpdateUser:", error);
-    return res.status(500).json({ error: "Internal Server Error" });
-  }
-});
 
 
 // CRUD 
@@ -506,28 +391,6 @@ exports.createOrUpdateUser = functions.https.onRequest(async (req, res) => {
 //user modules
 
 
-exports.onUserCreate = functions.auth.user().onCreate(async (user) => {
-  try {
-    const uid = user.uid;
-    const userRef = db.collection("users").doc(uid);
-
-    const userData = {
-      uid,
-      email: user.email || "",
-      displayName: user.displayName || "",
-      profilePhotoUrl: user.photoURL || "",
-      trustScore: 5,
-      listedItemsCount: 0,
-      borrowedItemsCount: 0,
-      joinedAt: FieldValue.serverTimestamp(),
-    };
-
-    await userRef.set(userData, { merge: true });
-    console.log(`✅ Firestore user document created for UID: ${uid}`);
-  } catch (err) {
-    console.error("❌ Error creating user document:", err);
-  }
-});
 
 
 // Get user by UID
