@@ -45,7 +45,7 @@ export default function WelcomeScreen({ navigation }) {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.logo}>UniSwap</Text>
-        <Text style={styles.tagline}>Campus Marketplace</Text>
+        <Text style={styles.tagline}>Swap & Share</Text>
       </View>
 
       {/* Hero Section */}

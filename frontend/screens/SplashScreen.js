@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import {
     Animated,
     Dimensions,
@@ -10,54 +10,75 @@ import {
 const { width, height } = Dimensions.get('window');
 
 export default function SplashScreen({ navigation }) {
-  const fadeAnim = new Animated.Value(0);
-  const slideAnim = new Animated.Value(50);
+  // Use useRef to ensure animations persist correctly
+  const scaleAnim = useRef(new Animated.Value(0)).current; // For Logo Pop
+  const fadeAnim = useRef(new Animated.Value(0)).current;  // For Text Fade
+  const slideAnim = useRef(new Animated.Value(30)).current; // For Text Slide
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
+    // Animation Sequence: Logo Pops -> Then Text Fades In
+    Animated.sequence([
+      // 1. Logo "Spring" (Pop) Animation
+      Animated.spring(scaleAnim, {
         toValue: 1,
-        duration: 1200,
+        friction: 5,   // Controls "bounciness"
+        tension: 40,
         useNativeDriver: true,
       }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 1200,
-        useNativeDriver: true,
-      }),
+      // 2. Text Fade & Slide Animation (Parallel)
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]),
     ]).start();
 
-    // ALWAYS go to Welcome screen first, no auth check
+    // Navigation Timer
     const timer = setTimeout(() => {
       console.log("🟡 Always navigating to Welcome screen first");
       navigation.replace('Welcome');
-    }, 3000);
+    }, 2500); // Slightly reduced time since animation is snappier
 
     return () => clearTimeout(timer);
-  }, [navigation]);
+  }, [navigation, scaleAnim, fadeAnim, slideAnim]);
 
   return (
     <View style={styles.container}>
       <View style={styles.background}>
-        <View style={styles.colorStrip1} />
-        <View style={styles.colorStrip2} />
-        <View style={styles.colorStrip3} />
         
-        <Animated.View
-          style={[
-            styles.content,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            },
-          ]}
-        >
-          <View style={styles.logoCircle}>
+        {/* Content Container */}
+        <View style={styles.content}>
+          
+          {/* Animated Logo Circle */}
+          <Animated.View 
+            style={[
+              styles.logoCircle, 
+              { transform: [{ scale: scaleAnim }] } // Apply Scale Animation
+            ]}
+          >
             <Text style={styles.logoText}>🔄</Text>
-          </View>
-          <Text style={styles.title}>UniSwap</Text>
-          <Text style={styles.subtitle}>Campus Marketplace</Text>
-        </Animated.View>
+          </Animated.View>
+
+          {/* Animated Text Block */}
+          <Animated.View
+            style={{
+              alignItems: 'center',
+              opacity: fadeAnim,              // Apply Fade
+              transform: [{ translateY: slideAnim }], // Apply Slide
+            }}
+          >
+            <Text style={styles.title}>UniSwap</Text>
+            <Text style={styles.subtitle}>Swap & Share</Text>
+          </Animated.View>
+
+        </View>
 
         <Text style={styles.footer}>IIT Ropar</Text>
       </View>
@@ -71,33 +92,7 @@ const styles = StyleSheet.create({
   },
   background: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  colorStrip1: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: height * 0.3,
-    backgroundColor: '#0A66C2',
-  },
-  colorStrip2: {
-    position: 'absolute',
-    top: height * 0.2,
-    left: 0,
-    right: 0,
-    height: height * 0.3,
-    backgroundColor: '#10B981',
-    opacity: 0.8,
-  },
-  colorStrip3: {
-    position: 'absolute',
-    top: height * 0.4,
-    left: 0,
-    right: 0,
-    height: height * 0.3,
-    backgroundColor: '#F59E0B',
-    opacity: 0.6,
+    backgroundColor: '#0A66C2', // ✅ Single Brand Color (Blue)
   },
   content: {
     flex: 1,
@@ -106,13 +101,13 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   logoCircle: {
-    width: 100,
-    height: 100,
+    width: 120, // Slightly larger
+    height: 120,
     backgroundColor: 'white',
-    borderRadius: 50,
+    borderRadius: 60,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 25,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -120,28 +115,30 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.3,
     shadowRadius: 5,
-    elevation: 8,
+    elevation: 10,
   },
   logoText: {
-    fontSize: 40,
+    fontSize: 50,
   },
   title: {
-    fontSize: 36,
+    fontSize: 40,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: '#FFFFFF', // ✅ White Text
     marginBottom: 8,
+    letterSpacing: 1,
   },
   subtitle: {
     fontSize: 18,
-    color: '#6B7280',
+    color: '#E0E7FF', // ✅ Off-white/Light Blue for subtitle
     fontWeight: '500',
   },
   footer: {
     position: 'absolute',
-    bottom: 30,
+    bottom: 40,
     alignSelf: 'center',
     fontSize: 16,
-    color: '#6B7280',
-    fontWeight: '500',
+    color: '#A5F3FC', // ✅ Light Cyan for footer
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
 });
