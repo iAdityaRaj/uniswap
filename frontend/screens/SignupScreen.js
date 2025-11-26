@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -8,9 +9,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,          // ✅ added
 } from "react-native";
 // ✅ Added fetchSignInMethodsForEmail to imports
-import { createUserWithEmailAndPassword, fetchSignInMethodsForEmail } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  fetchSignInMethodsForEmail,
+} from "firebase/auth";
 import { auth, db } from "../firebaseConfig";
 import { doc, setDoc } from "firebase/firestore";
 import Toast from "react-native-toast-message";
@@ -67,9 +72,8 @@ export default function SignupScreen({ navigation }) {
       setLoading(true);
 
       // ✅ CHECK IF USER ALREADY EXISTS
-      // This checks Firebase Auth to see if the email has sign-in methods (i.e., exists)
       const methods = await fetchSignInMethodsForEmail(auth, email);
-      
+
       if (methods && methods.length > 0) {
         Toast.show({
           type: "info",
@@ -77,15 +81,18 @@ export default function SignupScreen({ navigation }) {
           text2: "This email is already registered. Please login instead.",
         });
         setLoading(false);
-        return; // 🛑 Stop execution here
+        return;
       }
 
       // Proceed to send OTP if user does not exist
-      const response = await fetch("https://us-central1-uniswap-iitrpr.cloudfunctions.net/sendOtpEmail", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
+      const response = await fetch(
+        "https://us-central1-uniswap-iitrpr.cloudfunctions.net/sendOtpEmail",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        }
+      );
 
       const data = await response.json();
 
@@ -103,8 +110,8 @@ export default function SignupScreen({ navigation }) {
       }
     } catch (error) {
       // Handle specific Firebase error for existing user (fallback)
-      if (error.code === 'auth/email-already-in-use') {
-         Toast.show({
+      if (error.code === "auth/email-already-in-use") {
+        Toast.show({
           type: "info",
           text1: "Account Already Exists",
           text2: "Please login with this email.",
@@ -132,17 +139,26 @@ export default function SignupScreen({ navigation }) {
         keyboardShouldPersistTaps="handled"
       >
         <View style={{ width: "100%", alignItems: "center" }}>
+          {/* 🔵 Logo banner (same style as Login) */}
+          <View style={styles.logoWrap}>
+            <Image
+              source={require("../assets/uniswapLogo.jpg")}
+              style={styles.logo}
+            />
+          </View>
+
           <Text style={styles.title}>Create Your UniSwap Account</Text>
 
-          {/* ✅ Added explicit color and placeholderTextColor */}
+          {/* ✅ Name */}
           <TextInput
             style={styles.input}
             placeholder="Full Name"
-            placeholderTextColor="#888" 
+            placeholderTextColor="#888"
             value={name}
             onChangeText={setName}
           />
 
+          {/* ✅ Email */}
           <TextInput
             style={[
               styles.input,
@@ -156,7 +172,9 @@ export default function SignupScreen({ navigation }) {
             onChangeText={setEmail}
           />
 
-          {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+          {emailError ? (
+            <Text style={styles.errorText}>{emailError}</Text>
+          ) : null}
 
           {/* 👁️ Password field with show/hide toggle */}
           <View style={styles.passwordContainer}>
@@ -180,6 +198,7 @@ export default function SignupScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
+          {/* ✅ Signup button */}
           <TouchableOpacity
             style={[styles.signupButton, loading && { opacity: 0.6 }]}
             onPress={handleSignup}
@@ -190,8 +209,11 @@ export default function SignupScreen({ navigation }) {
             </Text>
           </TouchableOpacity>
 
+          {/* ✅ Login link */}
           <TouchableOpacity onPress={() => navigation.navigate("Login")}>
-            <Text style={styles.loginLink}>Already have an account? Login</Text>
+            <Text style={styles.loginLink}>
+              Already have an account? Login
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -207,6 +229,29 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: "#fff",
   },
+
+  // 🔵 same logo styles as LoginScreen
+  logoWrap: {
+    width: "100%", // fills device width
+    paddingHorizontal: 14, // spacing from edges so rounding looks clean
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 18,
+  },
+  logo: {
+    width: "100%", // banner width
+    height: undefined,
+    aspectRatio: 16 / 9, // adjust if your image is taller/shorter
+    resizeMode: "cover",
+    borderRadius: 30,
+    overflow: "hidden",
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+  },
+
   title: {
     fontSize: 24,
     fontWeight: "bold",
@@ -222,7 +267,7 @@ const styles = StyleSheet.create({
     padding: 15,
     marginBottom: 10,
     fontSize: 16,
-    color: "#000", // ✅ Ensures text is black and visible
+    color: "#000", // text visible
   },
   passwordContainer: {
     width: "100%",
@@ -237,7 +282,7 @@ const styles = StyleSheet.create({
     padding: 15,
     fontSize: 16,
     paddingRight: 45,
-    color: "#000", // ✅ Ensures text is black and visible
+    color: "#000",
   },
   eyeIcon: {
     position: "absolute",

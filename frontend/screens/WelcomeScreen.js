@@ -51,7 +51,7 @@ export default function WelcomeScreen({ navigation }) {
       {/* Hero Section */}
       <View style={styles.hero}>
         <View style={styles.illustration}>
-          <Text style={styles.illustrationEmoji}>🔄</Text>
+          <Text style={styles.illustrationEmoji}>🤝</Text>
         </View>
         <Text style={styles.heroTitle}>
           Borrow, Swap & Connect

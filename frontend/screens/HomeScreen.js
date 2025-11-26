@@ -95,11 +95,11 @@ export default function HomeScreen({ navigation }) {
       <View style={styles.header}>
         <View style={styles.headerGradient}>
           <View>
-            <Text style={styles.greeting}>Welcome to UniSwap! 🎉</Text>
-            <Text style={styles.subtitle}>Discover, Borrow & Share with Campus</Text>
+            <Text style={styles.greeting}>Welcome to UniSwap</Text>
+            <Text style={styles.subtitle}>Discover, Borrow & Share within Campus</Text>
           </View>
           <View style={styles.headerIcon}>
-            <Ionicons name="swap-horizontal" size={32} color="#fff" />
+            <Ionicons name="swap-horizontal" size={32} color="#e9e9e9ff" />
           </View>
         </View>
       </View>
