@@ -3,6 +3,8 @@ import { useFocusEffect } from "@react-navigation/native";
 import { signOut } from "firebase/auth";
 import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { useCallback, useEffect, useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 import {
   ActivityIndicator,
   FlatList,
@@ -19,6 +21,8 @@ import { auth, db } from "../firebaseConfig";
 const BASE_URL = "https://us-central1-uniswap-iitrpr.cloudfunctions.net";
 
 export default function ProfileScreen({ navigation, route }) {
+  const insets = useSafeAreaInsets();
+
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -113,7 +117,7 @@ export default function ProfileScreen({ navigation, route }) {
     if (trustScore < 60) trustColor = "#DC2626";
 
     return (
-      <View>
+      <View style={{ paddingTop: insets.top + 12 }}>
         <Text style={styles.header}>Profile</Text>
 
         {!isOwnProfile && userData && (
@@ -134,6 +138,11 @@ export default function ProfileScreen({ navigation, route }) {
                     onChangeText={setNewName}
                     placeholder="Enter new name"
                     placeholderTextColor="#999"
+                    autoFocus={true}
+                    returnKeyType="done"
+                    blurOnSubmit={false}            // important: prevents blur on submit
+                    onSubmitEditing={handleSaveName} // handy: pressing done saves
+                    keyboardAppearance="default"
                   />
                   <TouchableOpacity style={styles.saveBtn} onPress={handleSaveName}>
                     <Text style={styles.saveText}>Save</Text>
@@ -192,14 +201,14 @@ export default function ProfileScreen({ navigation, route }) {
                   </TouchableOpacity>
 
                   {/* ✅ ADDED NOTIFICATION SETTINGS MENU ITEM */}
-                  <TouchableOpacity 
+                  {/* <TouchableOpacity 
                     style={styles.menuItem}
                     onPress={() => navigation.navigate("NotificationSettings")}
                   >
                     <Ionicons name="notifications-outline" size={24} color="#0A66C2" />
                     <Text style={styles.menuText}>Notification Settings</Text>
                     <Ionicons name="chevron-forward" size={20} color="#6B7280" />
-                  </TouchableOpacity>
+                  </TouchableOpacity> */}
                 </View>
 
                 <Text style={styles.sectionTitle}>My Wishlist ❤️</Text>
@@ -373,3 +382,6 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
 });
+
+
+
