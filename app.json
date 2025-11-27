@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "aa1b8bf8-d893-4ab5-9245-4d0eba1000d0"
+      }
+    },
+    "android": {
+      "package": "com.aaediie.uniswap"
+    },
+    "plugins": [
+      "expo-font"
+    ]
+  }
+}
