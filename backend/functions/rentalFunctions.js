@@ -23,15 +23,13 @@ exports.initializeUser = functions.auth.user().onCreate(async (user) => {
       },
       { merge: true }
     );
-    console.log(`✅ Initialized user ${user.uid} with trustScore 100`);
+    console.log(` Initialized user ${user.uid} with trustScore 100`);
   } catch (err) {
-    console.error("❌ Error initializing user:", err);
+    console.error(" Error initializing user:", err);
   }
 });
 
-/* -------------------------------------------------------------------------- */
-/*                             CREATE RENTAL RECORD                           */
-/* -------------------------------------------------------------------------- */
+
 exports.createRental = functions.https.onRequest(async (req, res) => {
   try {
     const { itemId, borrowerId, lenderId, startDate, endDate, itemTitle, itemImage } = req.body;
@@ -68,9 +66,7 @@ exports.createRental = functions.https.onRequest(async (req, res) => {
   }
 });
 
-/* -------------------------------------------------------------------------- */
-/*                          BORROWER MARKS RETURNED                           */
-/* -------------------------------------------------------------------------- */
+
 exports.markReturned = functions.https.onRequest(async (req, res) => {
   try {
     const { rentalId } = req.body;
@@ -102,11 +98,9 @@ exports.markReturned = functions.https.onRequest(async (req, res) => {
   }
 });
 
-/* -------------------------------------------------------------------------- */
-/*                          LENDER CONFIRMS RETURN                            */
-/* -------------------------------------------------------------------------- */
+
 /**
- * ✅ Updates trustScore and posts message to chat
+ * Update trustScore and posts message to chat
  * +20 if on time, -20 if late
  */
 exports.confirmReturn = functions.https.onRequest(async (req, res) => {
@@ -163,11 +157,11 @@ exports.confirmReturn = functions.https.onRequest(async (req, res) => {
         );
       }
 
-      // ✅ Optional: Post system message to chat
+      // Optional: Post system message to chat
       const chatId = [rentalData.borrowerId, rentalData.lenderId].sort().join("_");
       const messageText = isOnTime
-        ? `✅ Borrower returned "${rentalData.itemTitle}" on time (+20 trustScore)`
-        : `⚠️ Borrower returned "${rentalData.itemTitle}" late (-20 trustScore)`;
+        ? ` Borrower returned "${rentalData.itemTitle}" on time (+20 trustScore)`
+        : ` Borrower returned "${rentalData.itemTitle}" late (-20 trustScore)`;
 
       await db.collection("chats").doc(chatId).collection("messages").add({
         text: messageText,
@@ -187,8 +181,8 @@ exports.confirmReturn = functions.https.onRequest(async (req, res) => {
     return res.json({
       success: true,
       message: isOnTime
-        ? "✅ Return confirmed — borrower returned on time (+20 trustScore)"
-        : "⚠️ Return confirmed — borrower returned late (-20 trustScore)",
+        ? " Return confirmed — borrower returned on time (+20 trustScore)"
+        : " Return confirmed — borrower returned late (-20 trustScore)",
     });
   } catch (err) {
     console.error("confirmReturn error:", err);
@@ -196,9 +190,9 @@ exports.confirmReturn = functions.https.onRequest(async (req, res) => {
   }
 });
 
-/* -------------------------------------------------------------------------- */
-/*                       REMINDER + OVERDUE CHECK (CRON)                     */
-/* -------------------------------------------------------------------------- */
+
+//REMINDER + OVERDUE CHECK (CRON)             
+
 const sendGridKey =
   (functions.config().sendgrid && functions.config().sendgrid.key) ||
   process.env.SENDGRID_API_KEY;
@@ -208,9 +202,9 @@ const fromEmail =
 
 if (sendGridKey?.startsWith("SG.")) {
   sgMail.setApiKey(sendGridKey);
-  console.log("✅ SendGrid configured");
+  console.log(" SendGrid configured");
 } else {
-  console.warn("⚠️ SendGrid key not found — email reminders disabled");
+  console.warn(" SendGrid key not found — email reminders disabled");
 }
 
 async function processRentalReminders() {
@@ -218,7 +212,7 @@ async function processRentalReminders() {
   const upcomingThreshold = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
   const rentalsSnap = await db.collection("rentals").where("status", "==", "active").get();
-  if (rentalsSnap.empty) return console.log("ℹ️ No active rentals found.");
+  if (rentalsSnap.empty) return console.log(" No active rentals found.");
 
   const ops = [];
 
@@ -243,14 +237,14 @@ async function processRentalReminders() {
           await sgMail.send(msg);
           ops.push(ref.update({ reminderSent: true }));
         } catch (err) {
-          console.error("❌ Failed to send reminder:", err);
+          console.error("Failed to send reminder:", err);
         }
       }
     }
 
     // Overdue logic
     if (returnDeadline < now && !rental.returnConfirmed && rental.status !== "overdue") {
-      console.log(`⚠️ Marking rental ${doc.id} as overdue`);
+      console.log(` Marking rental ${doc.id} as overdue`);
       ops.push(ref.update({ status: "overdue", updatedAt: FieldValue.serverTimestamp() }));
 
       if (rental.borrowerId) {
@@ -272,21 +266,19 @@ async function processRentalReminders() {
   }
 
   await Promise.all(ops);
-  console.log("✅ Rental reminder & overdue checks complete.");
+  console.log(" Rental reminder & overdue checks complete.");
 }
 
 exports.checkRentalReminders = functions.pubsub
   .schedule("0 0 * * *")
   .timeZone("Asia/Kolkata")
   .onRun(async () => {
-    console.log("⏰ Scheduled reminder check started");
+    console.log(" Scheduled reminder check started");
     await processRentalReminders();
     return null;
   });
 
-/* -------------------------------------------------------------------------- */
-/*                            FETCH USER RENTALS                              */
-/* -------------------------------------------------------------------------- */
+
 exports.getUserRentals = functions.https.onRequest(async (req, res) => {
   try {
     const { uid } = req.query;
@@ -303,7 +295,7 @@ exports.getUserRentals = functions.https.onRequest(async (req, res) => {
 
     return res.status(200).json(rentals);
   } catch (err) {
-    console.error("❌ getUserRentals error:", err);
+    console.error("getUserRentals error:", err);
     return res.status(500).json({ error: err.message });
   }
 });
