@@ -9,7 +9,7 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 
 /**
- * ➕ Add Item to Wishlist
+ * Add Item to Wishlist
  * Endpoint: /addToWishlist
  * Method: POST
  */
@@ -36,10 +36,10 @@ exports.addToWishlist = functions.https.onRequest(async (req, res) => {
       createdAt: FieldValue.serverTimestamp(),
     });
 
-    console.log(`✅ Wishlist item added for user: ${uid}, item: ${item.itemId}`);
+    console.log(`Wishlist item added for user: ${uid}, item: ${item.itemId}`);
     return res.status(200).json({ message: "Item added to wishlist" });
   } catch (err) {
-    console.error("❌ Error adding to wishlist:", err);
+    console.error("Error adding to wishlist:", err);
     return res.status(500).json({ error: err.message });
   }
 });
@@ -67,13 +67,13 @@ exports.removeFromWishlist = functions.https.onRequest(async (req, res) => {
     console.log(`🗑️ Wishlist item removed for user: ${uid}, item: ${itemId}`);
     return res.status(200).json({ message: "Item removed from wishlist" });
   } catch (err) {
-    console.error("❌ Error removing from wishlist:", err);
+    console.error("Error removing from wishlist:", err);
     return res.status(500).json({ error: err.message });
   }
 });
 
 /**
- * 🔍 Get User Wishlist
+ * Get User Wishlist
  * Endpoint: /getWishlist?uid={userId}
  * Method: GET
  */
@@ -100,10 +100,10 @@ exports.getWishlist = functions.https.onRequest(async (req, res) => {
       ...doc.data(),
     }));
 
-    console.log(`📦 Wishlist fetched for user: ${uid}, total: ${wishlist.length}`);
+    console.log(`Wishlist fetched for user: ${uid}, total: ${wishlist.length}`);
     return res.status(200).json(wishlist);
   } catch (err) {
-    console.error("❌ Error fetching wishlist:", err);
+    console.error("Error fetching wishlist:", err);
     return res.status(500).json({ error: err.message });
   }
 });
