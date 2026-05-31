@@ -5,15 +5,15 @@ const admin = require("firebase-admin");
 const nodemailer = require("nodemailer");
 const { FieldValue } = require("firebase-admin/firestore");
 
-// ✅ Initialize Firebase only once
+// Initialize Firebase only once
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 const db = admin.firestore();
 
-/* -------------------- 🔐 EMAIL / SMTP CONFIG -------------------- */
 
-console.log("🔍 Firebase Config Snapshot (otpFunctions):", JSON.stringify(functions.config(), null, 2));
+
+console.log(" Firebase Config Snapshot (otpFunctions):", JSON.stringify(functions.config(), null, 2));
 
 // From .env (same as notifyProposalEmail)
 const SMTP_HOST = process.env.SMTP_HOST;
@@ -42,13 +42,13 @@ if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
 
   transporter
     .verify()
-    .then(() => console.log("✅ [otpFunctions] SMTP transporter ready"))
-    .catch((err) => console.error("❌ [otpFunctions] SMTP verify failed:", err));
+    .then(() => console.log(" [otpFunctions] SMTP transporter ready"))
+    .catch((err) => console.error(" [otpFunctions] SMTP verify failed:", err));
 } else {
-  console.warn("⚠️ [otpFunctions] SMTP credentials missing – OTP emails will be skipped.");
+  console.warn(" [otpFunctions] SMTP credentials missing – OTP emails will be skipped.");
 }
 
-/* -------------------- ✉️ SEND OTP EMAIL -------------------- */
+
 exports.sendOtpEmail = functions.https.onRequest(async (req, res) => {
   try {
     const { email } = req.body;
@@ -74,7 +74,7 @@ exports.sendOtpEmail = functions.https.onRequest(async (req, res) => {
         .json({ message: "OTP generated and stored (email skipped – SMTP not configured)" });
     }
 
-    const subject = "🔐 Verify Your Email – Uniswap IIT Ropar";
+    const subject = " Verify Your Email – Uniswap IIT Ropar";
 
     const textBody = `Your OTP for Uniswap IIT Ropar is: ${otp}\nThis code expires in 5 minutes.`;
 
@@ -108,7 +108,7 @@ exports.sendOtpEmail = functions.https.onRequest(async (req, res) => {
       html: htmlBody,
     });
 
-    console.log(`✅ OTP email sent successfully to ${email}`);
+    console.log(`OTP email sent successfully to ${email}`);
     return res.status(200).json({ message: "OTP sent successfully" });
   } catch (err) {
     console.error("Error sending OTP (but OTP stored):", {
@@ -123,7 +123,7 @@ exports.sendOtpEmail = functions.https.onRequest(async (req, res) => {
   }
 });
 
-/* -------------------- ✅ VERIFY OTP -------------------- */
+
 exports.verifyOtp = functions.https.onRequest(async (req, res) => {
   try {
     let { email, otp } = req.body;
