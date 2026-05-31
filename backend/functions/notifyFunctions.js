@@ -9,7 +9,7 @@ if (!admin.apps.length) {
 }
 const db = admin.firestore();
 
-// ---------- CONFIG ----------
+
 const config = functions.config() || {};
 const smtpConfig = config.smtp || {};
 
@@ -55,10 +55,10 @@ if (!SMTP_USER || !SMTP_PASS) {
       pass: SMTP_PASS,
     },
   });
-  console.log("✅ Nodemailer transporter configured");
+  console.log(" Nodemailer transporter configured");
 }
 
-// ---------- FUNCTION ----------
+
 exports.notifyProposalEmail = functions.https.onRequest(async (req, res) => {
   try {
     if (req.method !== "POST") {
@@ -133,9 +133,9 @@ exports.notifyProposalEmail = functions.https.onRequest(async (req, res) => {
 
     try {
       await transporter.sendMail(mailOptions);
-      console.log("✅ Email sent to", toEmail);
+      console.log(" Email sent to", toEmail);
     } catch (err) {
-      console.error("❌ Email send failed (but request will still succeed):", {
+      console.error(" Email send failed (but request will still succeed):", {
         message: err.message,
         code: err.code,
         response: err.response,
